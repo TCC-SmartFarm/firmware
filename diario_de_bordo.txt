@@ -1,0 +1,50 @@
+================================ 12/02/2025 =========================
+
+* Instalação do pacote esp-idf-lib/dht 
+    idf.py add-component "CAMINHO_DA_PASTA"
+
+* Lembrar de instalar as dependencas pelo console da ESP-IDF, nao o proprio terminal
+    Se não abrir, usar >ESP-IDF: Open ESP-IDF Terminal
+
+================================ 13/02/2025 =========================
+
+* Após instalação de um componente, preencher o arquivo CMakeLists.txt DENTRO DA PASTA
+MAIN para informar a ESP-IDF que o pacote deve ser incluido na build do projeto.
+
+* Novos componentes sao inserido no arquivo idf_components.yml
+
+* Instalação do pacote maucke/sdcard para utilidades de cartão SD
+
+* Instalação do pacote espp/ads1x15 para utilidades do conversor ADS1x15
+
+* Organização dos componentes -> Hardware Abstraction Layer (HAL)
+    - Exemplo: Pasta components/sensor_controller contendo o import dos componentes e
+    os arquivos .c e .h para cada tipo de sensor_controller
+    - Cada pasta "___"_controller, adicionar um arquivo CMakeLists.txt informando
+    quais componentes devem ser incluidos na build
+
+* Arquivo CMakeLists.txt:
+    - SRCS: arquivos .c contidos na pasta e que precisarão ser incluidos na build
+    - INCLUDE_DIRS: arquivos .h a fim de permitir o Include em outras pastas
+    - REQUIRES: pastas do componentes adicionados via o comando add-components
+
+================================ 16/02/2025 =========================
+
+* Remoção do componente maucke/sdcard
+    - O core da ESP-IDF já possui drivers capazes de interagir com cartões SD via SPI e
+    SDMMC
+    - Localizado na pasta ~esp/v5.5.2/esp-idf/components/esp_driver_sdspi
+
+================================ 23/02/2025 =========================
+
+* Antes de usar qualquer periférico, deve-se configurar:
+    - Primeiro o bus de comunicação
+    - Então, "atrelar" o device ao bus configurado para começar a fazer operações de IO
+
+================================ 03/03/2025 =========================
+
+* Tentativa de primeiro Flash do ESP - Porta de Cima do Notebook -> /dev/ttyUSB0
+
+* Nome da Placa ->  ESP32-D0WD-V3
+
+* Teste com um novo projeto de hello world -> Funcionou! Primeira build com o SO ok!
