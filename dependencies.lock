@@ -1,0 +1,118 @@
+dependencies:
+  esp-idf-lib/dht:
+    component_hash: a0a1b26519566809041bc8fccf754e3ee9b25f73b0decbdc51bfd16143dedd66
+    dependencies:
+    - name: esp-idf-lib/esp_idf_lib_helpers
+      registry_url: https://components.espressif.com
+      require: private
+      version: '*'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    targets:
+    - esp32
+    - esp32c2
+    - esp32c3
+    - esp32c5
+    - esp32c6
+    - esp32c61
+    - esp32h2
+    - esp32p4
+    - esp32s2
+    - esp32s3
+    version: 1.2.0
+  esp-idf-lib/esp_idf_lib_helpers:
+    component_hash: 689853bb8993434f9556af0f2816e808bf77b5d22100144b21f3519993daf237
+    dependencies: []
+    source:
+      registry_url: https://components.espressif.com
+      type: service
+    targets:
+    - esp32
+    - esp32c2
+    - esp32c3
+    - esp32c5
+    - esp32c6
+    - esp32c61
+    - esp32h2
+    - esp32p4
+    - esp32s2
+    - esp32s3
+    version: 1.4.0
+  espp/ads1x15:
+    component_hash: 751c1ad660de117343aca63c3d003d4d666bb80ddb3e04a8a7ee0637988bb963
+    dependencies:
+    - name: espp/base_peripheral
+      registry_url: https://components.espressif.com
+      require: private
+      version: '>=1.0'
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.0.34
+  espp/base_component:
+    component_hash: 695b1a9985af8b7ce74f0750b46e67d82fb7e5e847bcb6f82c29c7ca52b2e297
+    dependencies:
+    - name: espp/logger
+      registry_url: https://components.espressif.com
+      require: private
+      version: '>=1.0'
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com
+      type: service
+    version: 1.0.34
+  espp/base_peripheral:
+    component_hash: 75ba52ffa349e18308e3068d07f429ea9137bde83d1c54f376fbde0faa8c79b4
+    dependencies:
+    - name: espp/base_component
+      registry_url: https://components.espressif.com
+      require: private
+      version: '>=1.0'
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com
+      type: service
+    version: 1.0.34
+  espp/format:
+    component_hash: 0bcf9e24c5748d8de5c5368941baed281b4951f68a84f1f20a178535c4e2da4b
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com
+      type: service
+    version: 1.0.34
+  espp/logger:
+    component_hash: 5ce7b81bbc402def13d580d9a9763b142118dd466903a3895d6dbcb1aa1cfb91
+    dependencies:
+    - name: espp/format
+      registry_url: https://components.espressif.com
+      require: private
+      version: '>=1.0'
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com
+      type: service
+    version: 1.0.34
+  idf:
+    source:
+      type: idf
+    version: 5.5.2
+direct_dependencies:
+- esp-idf-lib/dht
+- espp/ads1x15
+- idf
+manifest_hash: b21315c283e27cc1c38f76a555740477bf8bac79382ebe9fc47c18b6cbb417dc
+target: esp32
+version: 2.0.0

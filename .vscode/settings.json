@@ -1,0 +1,11 @@
+{
+  "C_Cpp.intelliSenseEngine": "default",
+  "clangd.path": "/home/bgia/.espressif/tools/esp-clang/esp-19.1.2_20250312/esp-clang/bin/clangd",
+  "clangd.arguments": [
+    "--background-index",
+    "--query-driver=**",
+    "--compile-commands-dir=/home/bgia/Documents/TCC/SmartFarm/firmware/build"
+  ],
+  "idf.currentSetup": "/home/bgia/.espressif/v5.5.2/esp-idf",
+  "idf.port": "/dev/ttyS0"
+}
