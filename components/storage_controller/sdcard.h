@@ -4,14 +4,15 @@ Arquivo contendo os headers das funções implementadas no arquivo sdcard.c
 
 */
 
+// Include guards
+#ifndef SDCARD_H
+#define SDCARD_H
 
 // Includes
-#include "sdcard.h"
-#include "esp_vfs_fat.h"
-#include "sdmmc_cmd.h"
-#include "driver/sdspi_host.h"
-#include "esp_log.h"
-#include <stdio.h>
+#include "esp_err.h"
+#include <stddef.h>
+#include "hal/spi_types.h"
+
 
 
 esp_err_t sdcard_config(spi_host_device_t host_id, int cs_pin, const char* mount_point);
@@ -23,3 +24,5 @@ esp_err_t sdcard_read_chunk(const char* file_path, size_t offset, char* buffer, 
 esp_err_t sdcard_unmount(const char* mount_point);
 
 esp_err_t sdcard_debug_lifecycle(spi_host_device_t host_id, int cs_pin);
+
+#endif 
