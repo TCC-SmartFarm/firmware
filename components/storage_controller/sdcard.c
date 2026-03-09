@@ -89,26 +89,74 @@ esp_err_t sdcard_read_chunk(const char* file_path, size_t offset, char* buffer, 
         return ESP_ERR_INVALID_ARG;
     }
 
-    // Abre o ficheiro em modo "r" (leitura).
     FILE* f = fopen(file_path, "r");
     if (f == NULL) {
         ESP_LOGE(TAG, "Falha ao abrir o ficheiro %s para leitura.", file_path);
         return ESP_FAIL;
     }
 
-    // Desloca o ponteiro de leitura para a posição solicitada
     if (fseek(f, offset, SEEK_SET) != 0) {
         ESP_LOGE(TAG, "Falha ao posicionar o ponteiro no offset %zu.", offset);
         fclose(f);
         return ESP_FAIL;
     }
 
-    // Lê até buffer_size - 1 para reservar espaço para o terminador nulo
     *bytes_read = fread(buffer, 1, buffer_size - 1, f);
-    
-    // Adiciona terminador nulo para que o buffer possa ser tratado de forma segura como string
+
     buffer[*bytes_read] = '\0';
 
     fclose(f);
+    return ESP_OK;
+}
+
+esp_err_t sdcard_unmount(const char* mount_point) {
+    if (mount_point == NULL) {
+        ESP_LOGE(TAG, "Ponto de montagem inválido.");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    esp_err_t ret = esp_vfs_fat_sdcard_unmount(mount_point, card);
+    
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Falha ao desmontar o cartão SD no ponto %s (%s).", mount_point, esp_err_to_name(ret));
+        return ret;
+    }
+
+
+    card = NULL;
+
+    ESP_LOGI(TAG, "Cartão SD desmontado com sucesso do ponto: %s", mount_point);
+    return ESP_OK;
+}
+
+esp_err_t sdcard_debug_lifecycle(spi_host_device_t host_id, int cs_pin) {
+    
+    const char* mount_point = "/sdcard";
+    const char* test_file = "/sdcard/teste.txt";
+    const char* test_data = "Teste de gravacao: sensor_dummy=25.5";
+    esp_err_t ret;
+
+    ESP_LOGI(TAG, "\n====== Inciando teste do cartão SD ======\n");
+
+    ret = sdcard_config(host_id, cs_pin, mount_point);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Teste falhou na etapa de configuração.");
+        return ret;
+    }
+
+    ret = sdcard_write(test_file, test_data);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Teste falhou na etapa de escrita.");
+        sdcard_unmount(mount_point);
+        return ret;
+    }
+
+    ret = sdcard_unmount(mount_point);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Teste falhou na etapa de desmontagem.");
+        return ret;
+    }
+
+    ESP_LOGI(TAG, "--- TESTE DE CICLO DE VIDA CONCLUÍDO COM SUCESSO ---");
     return ESP_OK;
 }

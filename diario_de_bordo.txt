@@ -54,3 +54,10 @@ MAIN para informar a ESP-IDF que o pacote deve ser incluido na build do projeto.
 * No arquivo CMakeLists.txt de cada controller, caso não opte-se por criar uma pasta "/include" apenas para
 armazenar o arquivo de headers <nome>.h usar:
     ... INCLUDE_DIRS "."
+
+
+================================ 09/03/2025 =========================
+
+* Para a configuração das interfaces SPI:
+    - Conpartilhar aa interface entre o módulo de cartão SD e o LoRa
+    - Alterar apenas o parâmetro CHIP SELECT na hora da comunicação
