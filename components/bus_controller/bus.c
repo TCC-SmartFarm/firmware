@@ -35,3 +35,15 @@ esp_err_t bus_spi_init(spi_host_device_t host_id, int mosi_pin, int miso_pin, in
     ESP_LOGI(TAG, "Barramento SPI inicializado com sucesso.");
     return ESP_OK;
 }
+
+esp_err_t bus_spi_free(spi_host_device_t host_id) {
+    // Libera os recursos alocados para o barramento
+    esp_err_t ret = spi_bus_free(host_id);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Falha ao liberar barramento SPI (Host ID: %d) - %s", host_id, esp_err_to_name(ret));
+        return ret;
+    }
+
+    ESP_LOGI(TAG, "Barramento SPI liberado com sucesso.");
+    return ESP_OK;
+}
