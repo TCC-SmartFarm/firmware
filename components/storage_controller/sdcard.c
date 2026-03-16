@@ -31,6 +31,7 @@ esp_err_t sdcard_config(spi_host_device_t host_id, int cs_pin, const char* mount
     // Configuração do host SD via SPI 
     sdmmc_host_t host = SDSPI_HOST_DEFAULT();
     host.slot = host_id; // Acopla ao barramento SPI externo já inicializado
+    host.max_freq_khz = 4000; // Reduçõa do clock para testes no protoboard
 
     //Configuração do pino CS e host no dispositivo
     sdspi_device_config_t slot_config = SDSPI_DEVICE_CONFIG_DEFAULT();

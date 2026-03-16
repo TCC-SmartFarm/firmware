@@ -61,3 +61,13 @@ armazenar o arquivo de headers <nome>.h usar:
 * Para a configuração das interfaces SPI:
     - Conpartilhar aa interface entre o módulo de cartão SD e o LoRa
     - Alterar apenas o parâmetro CHIP SELECT na hora da comunicação
+
+================================ 16/03/2025 =========================
+
+* Problemas na inicialização do cartão SD:
+    - Possivelmente causado por maus contatos físicos nas ligações do protoboard
+    - Erro ESP_ERR_INVALID_CRC indica que a comunicação foi estabelecida, mas não conseguiu-se finalizar a configuração (já é um erro mlhor que o timeout!)
+    - Redução do CLock SPI no menuconfig da ESP-IDF para 20Mhz
+    - Limitação por SW do clock SPI do Cartão SD
+
+* Teste bem sucedido do cartão SD!

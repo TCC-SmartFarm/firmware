@@ -35,8 +35,7 @@ static const char *TAG = "main";
 void app_main(void) {
     ESP_LOGI(TAG, "\n========== Inicializado! ============\n");
 
-    // Inicializa o barramento SPI partilhado no host SPI2_HOST
-    // 4000 bytes para max_transfer_sz é um valor seguro para o driver SDMMC
+    // Inicializa o barramento SPI no host SPI2_HOST
     esp_err_t ret = bus_spi_init(SPI2_HOST, PIN_NUM_MOSI_SD, PIN_NUM_MISO_SD, PIN_NUM_CLK_SD, 4000);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Falha fatal ao inicializar barramento SPI.");
@@ -46,7 +45,7 @@ void app_main(void) {
     // Executa o ciclo de teste do cartão SD
     ret = sdcard_debug_lifecycle(SPI2_HOST, PIN_NUM_CS_SD);
     if (ret == ESP_OK) {
-        ESP_LOGI(TAG, "Teste do SD concluído com sucesso. O ficheiro de teste deve estar no cartão.");
+        ESP_LOGI(TAG, "Teste do SD concluído com sucesso. Arquivo criado no ponto de montagem.");
     } else {
         ESP_LOGE(TAG, "Erro durante o teste do SD.");
     }

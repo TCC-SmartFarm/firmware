@@ -1,12 +1,8 @@
 {
-  "C_Cpp.intelliSenseEngine": "default",
-  "clangd.path": "/home/bgia/.espressif/tools/esp-clang/esp-19.1.2_20250312/esp-clang/bin/clangd",
-  "clangd.arguments": [
-    "--background-index",
-    "--query-driver=**",
-    "--compile-commands-dir=/home/bgia/Documents/TCC/SmartFarm/firmware/build"
-  ],
-  "idf.currentSetup": "/home/bgia/.espressif/v5.5.2/esp-idf",
-  "idf.port": "/dev/ttyUSB0",
-  "idf.flashType": "UART"
+    "idf.espIdfPath": "C:\\Users\\User\\esp\\esp-idf",
+    "idf.toolsPath": "C:\\Users\\User\\.espressif",
+    "idf.pythonBinPath": "C:\\Users\\User\\.espressif\\python_env\\idf5.x_env\\Scripts\\python.exe",
+    "idf.currentSetup": "C:/Espressif/frameworks/esp-idf-v5.5.2/",
+    "idf.portWin": "COM3",
+    "idf.flashType": "UART"
 }
