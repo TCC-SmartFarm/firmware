@@ -71,3 +71,8 @@ armazenar o arquivo de headers <nome>.h usar:
     - Limitação por SW do clock SPI do Cartão SD
 
 * Teste bem sucedido do cartão SD!
+
+* Inico da codificação das funções para o DHT22
+
+* Erros durante o teste do DHT22
+    - ESP não flash se o DHT estiver alimentado (?)

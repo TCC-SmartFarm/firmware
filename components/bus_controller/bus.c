@@ -1,6 +1,6 @@
 /*
 
-Arquivodestinado a realizar a configuração dos barramentos SPI e I2C a serem compartilhados entre diferentes módulos.
+Arquivo destinado a realizar a configuração dos barramentos SPI e I2C a serem compartilhados entre diferentes módulos.
 
 */
 

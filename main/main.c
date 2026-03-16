@@ -4,13 +4,15 @@ Arquivo contendo o loop principal de execução.
 
 */
 
-// Includes
+// Includes de sistema
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
+// Includes dos componetes
 #include "bus.h"
 #include "sdcard.h"
+#include "air_sensor.h"
 
 static const char *TAG = "main";
 
@@ -35,23 +37,27 @@ static const char *TAG = "main";
 void app_main(void) {
     ESP_LOGI(TAG, "\n========== Inicializado! ============\n");
 
-    // Inicializa o barramento SPI no host SPI2_HOST
-    esp_err_t ret = bus_spi_init(SPI2_HOST, PIN_NUM_MOSI_SD, PIN_NUM_MISO_SD, PIN_NUM_CLK_SD, 4000);
+    esp_err_t ret = air_sensor_init(PIN_NUM_SDA_DHT);
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Falha fatal ao inicializar barramento SPI.");
-        return; // Interrompe a execução se não houver barramento
+        ESP_LOGE(TAG, "Falha na inicialização do sensor.");
+        return; // Interrompe se o pino for inválido
     }
 
-    // Executa o ciclo de teste do cartão SD
-    ret = sdcard_debug_lifecycle(SPI2_HOST, PIN_NUM_CS_SD);
-    if (ret == ESP_OK) {
-        ESP_LOGI(TAG, "Teste do SD concluído com sucesso. Arquivo criado no ponto de montagem.");
-    } else {
-        ESP_LOGE(TAG, "Erro durante o teste do SD.");
-    }
+        while (1) {
 
-    // Liberta o barramento
-    bus_spi_free(SPI2_HOST);
+            vTaskDelay(pdMS_TO_TICKS(2000));
 
-    ESP_LOGI(TAG, "Fim do teste de hardware.");
+            float temp = 0.0;
+            float hum = 0.0;
+            
+            ret = air_sensor_read(&temp, &hum);
+
+            if (ret == ESP_OK) {
+                ESP_LOGI(TAG, "Leitura OK - Temp: %.1fC, Hum: %.1f%%", temp, hum);
+            } else {
+                ESP_LOGE(TAG, "Falha na leitura.");
+            }
+        }
+
+    ESP_LOGI(TAG, "\n========== Fim do teste! ============\n");
 }
