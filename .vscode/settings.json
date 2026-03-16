@@ -1,8 +1,0 @@
-{
-    "idf.espIdfPath": "C:\\Users\\User\\esp\\esp-idf",
-    "idf.toolsPath": "C:\\Users\\User\\.espressif",
-    "idf.pythonBinPath": "C:\\Users\\User\\.espressif\\python_env\\idf5.x_env\\Scripts\\python.exe",
-    "idf.currentSetup": "C:/Espressif/frameworks/esp-idf-v5.5.2/",
-    "idf.portWin": "COM3",
-    "idf.flashType": "UART"
-}
