@@ -1,5 +1,5 @@
 /*
-Arquivo destinado a definir funções de mais alto nível para as funcionalidade do cartão sd
+Definição de funções de mais alto nível para as funcionalidade do cartão sd
 a partir da funções providas pelo driver.
 */
 
@@ -15,28 +15,29 @@ a partir da funções providas pelo driver.
 static const char *TAG = "sdcard";
 static sdmmc_card_t *card; 
 
+
 esp_err_t sdcard_config(spi_host_device_t host_id, int cs_pin, const char* mount_point) {
     esp_err_t ret;
 
-    // 1. Configuração de montagem do sistema de arquivo
+    //Configuração de montagem do sistema de arquivo
     esp_vfs_fat_sdmmc_mount_config_t mount_config = {
-        .format_if_mount_failed = false, // Em falso para evitar formatação acidental de dados de sensores
-        .max_files = 3,                  // Limite de ficheiros abertos simultaneamente
+        .format_if_mount_failed = false, 
+        .max_files = 3,                  
         .allocation_unit_size = 16 * 1024
     };
 
     ESP_LOGI(TAG, "Iniciando o cartão SD...");
 
-    // 2. Configuração do host SD via SPI 
+    // Configuração do host SD via SPI 
     sdmmc_host_t host = SDSPI_HOST_DEFAULT();
     host.slot = host_id; // Acopla ao barramento SPI externo já inicializado
 
-    // 3. Configuração do pino CS e host no dispositivo
+    //Configuração do pino CS e host no dispositivo
     sdspi_device_config_t slot_config = SDSPI_DEVICE_CONFIG_DEFAULT();
     slot_config.gpio_cs = cs_pin;
     slot_config.host_id = host_id;
 
-    // 4. Montagem no VFS 
+    // Montagem no sistema de arquivo virtual do ESP 
     ret = esp_vfs_fat_sdspi_mount(mount_point, &host, &slot_config, &mount_config, &card);
 
     if (ret != ESP_OK) {

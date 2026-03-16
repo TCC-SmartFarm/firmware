@@ -24,7 +24,9 @@ static const char *TAG = "main";
 
 // LDR
 
+
 // DHT
+#define PIN_NUM_SDA_DHT 32
 
 // Higrometro
 
