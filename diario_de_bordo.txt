@@ -75,4 +75,14 @@ armazenar o arquivo de headers <nome>.h usar:
 * Inico da codificação das funções para o DHT22
 
 * Erros durante o teste do DHT22
-    - ESP não flash se o DHT estiver alimentado (?)
+    - ESP não flasha se o DHT estiver alimentado (?)
+
+
+================================ 23/03/2025 =========================
+
+* Debug do DHT22 suspenso! Testar com um voltímetro quando possível.
+
+* Implementação das funções para leitura do higrômetro de dois modos diferentes:
+    - Pino de entrada analógica do ESP32
+    - Utilização do conversor A/D ADS1115 -> Requer a configuração do barramento I²C
+    
