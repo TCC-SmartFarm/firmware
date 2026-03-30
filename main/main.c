@@ -55,38 +55,40 @@ static const char *TAG = "main";
 void app_main(void) {
     ESP_LOGI(TAG, "\n========== Inicializado! ============\n");
 
-// 1. Inicializa o barramento I2C partilhado
+    // 1. Inicializa a infraestrutura do barramento I2C
     esp_err_t ret = bus_i2c_init(I2C_MASTER_NUM, PIN_NUM_I2C_SDA, PIN_NUM_I2C_SCL, I2C_FREQ_HZ);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Falha na inicialização do barramento I2C.");
         return;
     }
 
-    // 2. Inicializa o sensor de luz apontando para o barramento e o canal A1
-    ret = light_sensor_init(I2C_MASTER_NUM, ADS1115_I2C_ADDRESS, ADS1115_CHANNEL_LDR);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Falha na inicialização do sensor de luz.");
-        bus_i2c_free(I2C_MASTER_NUM);
-        return;
-    }
+    // 2. Acopla os sensores ao barramento e aos seus respectivos canais
+    ret = soil_sensor_init_ads1115(I2C_MASTER_NUM, ADS1115_I2C_ADDRESS, ADS1115_CHANNEL_HIG);
+    if (ret != ESP_OK) ESP_LOGE(TAG, "Falha ao inicializar Higrômetro.");
 
-    // 3. Loop infinito de leitura
+    ret = light_sensor_init(I2C_MASTER_NUM, ADS1115_I2C_ADDRESS, ADS1115_CHANNEL_LDR);
+    if (ret != ESP_OK) ESP_LOGE(TAG, "Falha ao inicializar Sensor de Luz.");
+
+    // 3. Loop de amostragem
     while (1) {
+        float soil_moisture = 0.0;
         float light_level = 0.0;
         
-        // Efetua a leitura direcionada ao driver
-        ret = light_sensor_read(&light_level);
+        // Efetua as leituras sequencialmente
+        esp_err_t ret_soil = soil_sensor_read_ads1115(&soil_moisture);
+        esp_err_t ret_light = light_sensor_read(&light_level);
 
-        if (ret == ESP_OK) {
-            ESP_LOGI(TAG, "Nível de Luminosidade: %.1f%%", light_level);
+        // Formata a saída no terminal para facilitar a visualização
+        if (ret_soil == ESP_OK && ret_light == ESP_OK) {
+            ESP_LOGI(TAG, "Leituras -> Solo: %5.1f%% | Luz: %5.1f%%", soil_moisture, light_level);
         } else {
-            ESP_LOGE(TAG, "Falha na leitura do sensor de luz.");
+            ESP_LOGW(TAG, "Falha em uma ou mais leituras. Solo: %s, Luz: %s", 
+                     esp_err_to_name(ret_soil), esp_err_to_name(ret_light));
         }
 
-        // Aguarda 1 segundo antes da próxima leitura
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        // Aguarda 2 segundos antes da próxima amostragem conjunta
+        vTaskDelay(pdMS_TO_TICKS(2000));
     }
-
 
     ESP_LOGI(TAG, "\n========== Fim do teste! ============\n");
 }
