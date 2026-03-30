@@ -54,39 +54,8 @@ static const char *TAG = "main";
 void app_main(void) {
     ESP_LOGI(TAG, "\n========== Inicializado! ============\n");
 
-    ESP_LOGI(TAG, "Iniciando teste atômico do higrômetro (ADS1115 via I2C)...");
 
-    // 1. Inicializa o barramento I2C
-    esp_err_t ret = bus_i2c_init(I2C_MASTER_NUM, PIN_NUM_I2C_SDA, PIN_NUM_I2C_SCL, I2C_FREQ_HZ);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Falha na inicialização do barramento I2C.");
-        return;
-    }
 
-    // 2. Inicializa o sensor apontando para o barramento I2C instanciado
-    ret = soil_sensor_init_ads1115(I2C_MASTER_NUM, ADS1115_I2C_ADDRESS, ADS1115_CHANNEL);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Falha na inicialização do higrômetro (ADS1115).");
-        bus_i2c_free(I2C_MASTER_NUM);
-        return;
-    }
-
-    // 3. Loop de leitura
-    while (1) {
-        float moisture = 0.0;
-        
-        // Efetua a leitura direcionada ao driver I2C
-        ret = soil_sensor_read_ads1115(&moisture);
-
-        if (ret == ESP_OK) {
-            ESP_LOGI(TAG, "Umidade do solo (ADS1115): %.1f%%", moisture);
-        } else {
-            ESP_LOGE(TAG, "Falha na leitura do sensor via ADS1115.");
-        }
-
-        // Aguarda 1 segundo antes da próxima leitura
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
 
     ESP_LOGI(TAG, "\n========== Fim do teste! ============\n");
 }

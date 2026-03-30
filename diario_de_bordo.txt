@@ -1,4 +1,4 @@
-================================ 12/02/2025 =========================
+=============================================================== 12/02/2025 ===============================================================
 
 * Instalação do pacote esp-idf-lib/dht 
     idf.py add-component "CAMINHO_DA_PASTA"
@@ -6,7 +6,7 @@
 * Lembrar de instalar as dependencas pelo console da ESP-IDF, nao o proprio terminal
     Se não abrir, usar >ESP-IDF: Open ESP-IDF Terminal
 
-================================ 13/02/2025 =========================
+=============================================================== 13/02/2025 ===============================================================
 
 * Após instalação de um componente, preencher o arquivo CMakeLists.txt DENTRO DA PASTA
 MAIN para informar a ESP-IDF que o pacote deve ser incluido na build do projeto.
@@ -28,20 +28,20 @@ MAIN para informar a ESP-IDF que o pacote deve ser incluido na build do projeto.
     - INCLUDE_DIRS: arquivos .h a fim de permitir o Include em outras pastas
     - REQUIRES: pastas do componentes adicionados via o comando add-components
 
-================================ 16/02/2025 =========================
+=============================================================== 16/02/2025 ===============================================================
 
 * Remoção do componente maucke/sdcard
     - O core da ESP-IDF já possui drivers capazes de interagir com cartões SD via SPI e
     SDMMC
     - Localizado na pasta ~esp/v5.5.2/esp-idf/components/esp_driver_sdspi
 
-================================ 23/02/2025 =========================
+=============================================================== 23/02/2025 ===============================================================
 
 * Antes de usar qualquer periférico, deve-se configurar:
     - Primeiro o bus de comunicação
     - Então, "atrelar" o device ao bus configurado para começar a fazer operações de IO
 
-================================ 03/03/2025 =========================
+=============================================================== 03/03/2025 ===============================================================
 
 * Tentativa de primeiro Flash do ESP - Porta de Cima do Notebook -> /dev/ttyUSB0
 
@@ -49,24 +49,25 @@ MAIN para informar a ESP-IDF que o pacote deve ser incluido na build do projeto.
 
 * Teste com um novo projeto de hello world -> Funcionou! Primeira build com o SO ok!
 
-================================ 04/03/2025 =========================
+=============================================================== 04/03/2025 ===============================================================
 
 * No arquivo CMakeLists.txt de cada controller, caso não opte-se por criar uma pasta "/include" apenas para
 armazenar o arquivo de headers <nome>.h usar:
     ... INCLUDE_DIRS "."
 
 
-================================ 09/03/2025 =========================
+=============================================================== 09/03/2025 ===============================================================
 
 * Para a configuração das interfaces SPI:
     - Conpartilhar aa interface entre o módulo de cartão SD e o LoRa
     - Alterar apenas o parâmetro CHIP SELECT na hora da comunicação
 
-================================ 16/03/2025 =========================
+=============================================================== 16/03/2025 ===============================================================
 
 * Problemas na inicialização do cartão SD:
     - Possivelmente causado por maus contatos físicos nas ligações do protoboard
-    - Erro ESP_ERR_INVALID_CRC indica que a comunicação foi estabelecida, mas não conseguiu-se finalizar a configuração (já é um erro mlhor que o timeout!)
+    - Erro ESP_ERR_INVALID_CRC indica que a comunicação foi estabelecida, mas não conseguiu-se finalizar 
+    a configuração (já é um erro mlhor que o timeout!)
     - Redução do CLock SPI no menuconfig da ESP-IDF para 20Mhz
     - Limitação por SW do clock SPI do Cartão SD
 
@@ -78,7 +79,7 @@ armazenar o arquivo de headers <nome>.h usar:
     - ESP não flasha se o DHT estiver alimentado (?)
 
 
-================================ 23/03/2025 =========================
+=============================================================== 23/03/2025 ===============================================================
 
 * Debug do DHT22 suspenso! Testar com um voltímetro quando possível.
 
@@ -86,7 +87,7 @@ armazenar o arquivo de headers <nome>.h usar:
     - Pino de entrada analógica do ESP32
     - Utilização do conversor A/D ADS1115 -> Requer a configuração do barramento I²C
     
-================================ 30/03/2025 =========================
+=============================================================== 30/03/2025 ===============================================================
 
 * Abandono do uso do conversor AD interno do ESP:
     - Usa menos bits que o conversor externo
@@ -101,9 +102,35 @@ armazenar o arquivo de headers <nome>.h usar:
     - Pinos/Parâmetros específicos de cada device:
         <device>_I2C_ADDRESS ---> Endereço do device específico ligado ao barramento
 
-* Ligação dos sensore analógicos:
+* CONFIG REGISTER do ADS1115:
+    - Precisa receber como parâmetro de configuração uma variável de 16 bits
+    - Conjuntos de bits entre os 16 disponíveis controlam partes diferentes envolvidas na leitura:
+
+        Bit ---- Func ---------- Desc
+        15 ----- OS ------------ Status de operação
+        14-12 -- MUX[2:0] ------ Definição do canal
+        11-9 --- PGA[2:0] ------ Ganho
+        8 ------ MODE ---------- Modo de operação
+        7-5 ---- DR[2:0] ------- Data Rate
+        4 ------ COMP_MODE ----- Modo do Comparador
+        3 ------ COMP_POL ------ Polaridade do comparador
+        2 ------ COMP_LAT ------ Latching do comparador
+        1-0 ---- COMP_QUE[2:0] - Fila do comparador
+
+    - Define-se os bits para cada função e então faz-se a soma binária (OU - |) para chegar-se à
+    palavra de configuração final desejada
+
+    - Devide-se a palavra de configuração em 2 conjuntos de 8 bits a serem gravados no Config Register (endereço 0x01)
+        O protocolo I²C funciona em pacotes de 8 bits por vez
+        
+* Após a leitura e conversão, o ADS1115 joga o resultado (16 bits) no Conversion Register localizado no endereço 0x00
+
+* Ligação dos sensores analógicos:
     - Higrômetro e LDR
     - Leitura realizada no polo POSITIVO!
     - Ligação comum no GND e outro polo em cada canal específico do ADS1115
         Higrometro - A0
         LDR -------- A1
+
+* Teste do higrômetro OK!!
+
