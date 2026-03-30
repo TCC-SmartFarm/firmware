@@ -86,3 +86,24 @@ armazenar o arquivo de headers <nome>.h usar:
     - Pino de entrada analógica do ESP32
     - Utilização do conversor A/D ADS1115 -> Requer a configuração do barramento I²C
     
+================================ 30/03/2025 =========================
+
+* Abandono do uso do conversor AD interno do ESP:
+    - Usa menos bits que o conversor externo
+    - Opera em uma faixa de tensão mais estreita (max 3V3, comparado aos 5V do ADS1115)
+
+* Configuração do barramento I²C:
+    - Pinos/Parâmetros compartilhados:
+        PIN_NUM_I2C_SCL ---> Clock do BARRAMENTO
+        PIN_NUM_I2C_SDA ---> Via de dados do BARRAMENTO
+        I2C_MASTER_NUM  ---> Número da interface (o ESP32 tem 2 interfaces I²C)
+    
+    - Pinos/Parâmetros específicos de cada device:
+        <device>_I2C_ADDRESS ---> Endereço do device específico ligado ao barramento
+
+* Ligação dos sensore analógicos:
+    - Higrômetro e LDR
+    - Leitura realizada no polo POSITIVO!
+    - Ligação comum no GND e outro polo em cada canal específico do ADS1115
+        Higrometro - A0
+        LDR -------- A1
