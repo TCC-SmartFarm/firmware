@@ -4,8 +4,6 @@ Arquivo contendo os headers das funções implementadas no arquivo light_sensor.
 
 */
 
-
-
 // Include Guards
 #ifndef LIGHT_SENSOR_H
 #define LIGHT_SENSOR_H
