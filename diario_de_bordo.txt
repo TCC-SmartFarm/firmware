@@ -142,3 +142,8 @@ armazenar o arquivo de headers <nome>.h usar:
 * Leitura de todos os sensores OK!
 
 * Calibração!
+
+* Não faz sentido usar tasks para este caso de uso, uma vez que o fluxo de trabalho é estritamente sequencial.
+
+* O agrupamento de funcionalidades será atingido através de funções de orquestração definidas na própria main.c
+    - Exemplo: função execute_readings() ---> Chama todas as funções individuais de leituras definidas nos controladores
