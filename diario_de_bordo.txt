@@ -134,3 +134,11 @@ armazenar o arquivo de headers <nome>.h usar:
 
 * Teste do higrômetro OK!!
 
+=============================================================== 01/04/2025 ===============================================================
+
+* Debug DHT:
+    - Problema de Pinagem! Após troca do GPIO utilizado no teste, funcionou.
+
+* Leitura de todos os sensores OK!
+
+* Calibração!
