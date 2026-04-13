@@ -6,6 +6,8 @@ Arquivo contendo o loop principal de execução.
 
 // Includes de sistema
 #include <stdio.h>
+#include <time.h>
+#include <sys/time.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
@@ -55,6 +57,7 @@ static const char *TAG = "main";
 
 // Struct para armazenar uma leitura
 typedef struct {
+    time_t timestamp;     // Unix Epoch
     float air_temp;       // Temperatura do Ar (°C)
     float air_hum;        // Humidade do Ar (%)
     float soil_hum;       // Humidade do Solo (%)
@@ -164,6 +167,9 @@ static sensor_data_t execute_reading_cycle(void) {
         return data; // is_valid = false
     }
 
+    // Timestamp da leitura
+    time(&data.timestamp);
+
     // Delay para estabilização dos sensores
     ESP_LOGI(TAG, "Aguardando estabilização dos sensores (2 segundos)...");
     vTaskDelay(pdMS_TO_TICKS(2000));
@@ -178,8 +184,8 @@ static sensor_data_t execute_reading_cycle(void) {
     if (ret_air == ESP_OK && ret_soil == ESP_OK && ret_ldr == ESP_OK) {
         data.is_valid = true; // Indicativo de uma leitura bem sucedida
         ESP_LOGI(TAG, "Ciclo concluído com sucesso!");
-        ESP_LOGI(TAG, "Valores -> Ar: %.1fC / %.1f%% | Solo: %.1f%% | Luz: %.1f%%", 
-                 data.air_temp, data.air_hum, data.soil_hum, data.light_perc);
+        ESP_LOGI(TAG, "Timestamp - %i | Valores -> Ar: %.1fC / %.1f%% | Solo: %.1f%% | Luz: %.1f%%", 
+                 data.timestamp, data.air_temp, data.air_hum, data.soil_hum, data.light_perc);
     } else {
         ESP_LOGE(TAG, "Falha de comunicação em um ou mais sensores durante a leitura.");
         // is_valid = false

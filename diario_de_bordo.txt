@@ -165,3 +165,17 @@ armazenar o arquivo de headers <nome>.h usar:
 =============================================================== 13/04/2025 ===============================================================
 
 * Desenvolvimento da função de agregação para setup do barramento
+
+* Desenvolvimento da função de agregação para leitura do sensores com Timestamp
+    - O usuário deverá informar a data atual durante o setup para ajuste da Unix Epoch
+
+* Acompanhamento do Fluxo de funcionamento:
+
+    1 - Wake up 
+    2 - Menu de configuração 
+    3 - Setup do hardware -------- OK!
+    4 - Ciclo de Coleta ---------- OK!
+    5 - Armazenamento
+    6 - Transmissão 
+    7 - Tear Down 
+    8 - Deep Sleep 
