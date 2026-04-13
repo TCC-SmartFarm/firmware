@@ -39,7 +39,7 @@ esp_err_t soil_sensor_init_ads1115(i2c_port_t i2c_num, uint8_t i2c_address, int 
     ads_i2c_address = i2c_address;
     ads_channel = ads_chan;
     
-    ESP_LOGI(TAG, "Higrômetro I2C (ADS1115) OK!.");
+    ESP_LOGI(TAG, "Higrômetro I2C (ADS1115 - Ch %d) OK!.", ads_channel);
     return ESP_OK;
 }
 

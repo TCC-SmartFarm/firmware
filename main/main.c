@@ -82,7 +82,34 @@ static sensor_data_t execute_reading_cycle(void);
 void app_main(void) {
     ESP_LOGI(TAG, "\n========== Inicializado! ============\n");
 
+    // Setup
+    if (system_bus_init() != ESP_OK) {
+        ESP_LOGE(TAG, "Falha na inicialização do hardware base. Teste abortado.");
+        while (1) { vTaskDelay(pdMS_TO_TICKS(1000)); } // Trava o sistema
+    }
 
+    //  Coleta
+    while (1) {
+        ESP_LOGI(TAG, "--- Iniciando novo ciclo de leitura ---");
+        
+        // Chama a funçao de leitura
+        sensor_data_t current_data = execute_reading_cycle();
+
+        // Construção da struct
+        if (current_data.is_valid) {
+            ESP_LOGI(TAG, "Leitura OK!");
+            ESP_LOGI(TAG, "Ar: %.1fC | Umidade: %.1f%%", current_data.air_temp, current_data.air_hum);
+            ESP_LOGI(TAG, "Solo: %.1f%%", current_data.soil_hum);
+            ESP_LOGI(TAG, "Luz: %.1f%%", current_data.light_perc);
+        } else {
+            ESP_LOGE(TAG, "Leitura com falha... Descartando");
+        }
+        
+        ESP_LOGI(TAG, "---------------------------------------");
+
+        // Delay entre testes
+        vTaskDelay(pdMS_TO_TICKS(3000));
+    }
 
 
     ESP_LOGI(TAG, "\n========== Fim do teste! ============\n");
