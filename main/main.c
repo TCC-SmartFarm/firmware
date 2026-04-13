@@ -53,6 +53,15 @@ static const char *TAG = "main";
 // Módulo Lora
 
 
+// Struct para armazenar uma leitura
+typedef struct {
+    float air_temp;       // Temperatura do Ar (°C)
+    float air_hum;        // Humidade do Ar (%)
+    float soil_hum;       // Humidade do Solo (%)
+    float light_perc;     // Nível de Luminosidade (%)
+    bool is_valid;        // Flag para indicar se as leituras contêm dados reais ou se falharam
+                          // true -> grava e transmite os dados | false -> Apenas transmite para avisar o estado de erro e não poluir o SD
+} sensor_data_t;
 
 /* ------------------------------ Protótipos - Funções de Orquestração --------------------------------------*/
 
@@ -64,10 +73,15 @@ static const char *TAG = "main";
 
 static esp_err_t system_bus_init(void);
 
+/**
+ * @brief Instancia os drivers dos sensores, efetua uma leitura e agrupa os resultados.
+ * @return sensor_data_t Struct contendo os valores numéricos e uma flag de erro ou sucesso das leituras.
+ */
+static sensor_data_t execute_reading_cycle(void);
+
 void app_main(void) {
     ESP_LOGI(TAG, "\n========== Inicializado! ============\n");
 
-    esp_err_t ret = system_bus_init();
 
 
 
@@ -103,4 +117,46 @@ static esp_err_t system_bus_init(void) {
     // Ok!
     ESP_LOGI(TAG, "Todos os barramentos inicializados com sucesso.");
     return ESP_OK;
+}
+
+static sensor_data_t execute_reading_cycle(void) {
+    ESP_LOGI(TAG, "Iniciando ciclo de aquisição de dados...");
+    
+    // Inicialização da struct
+    sensor_data_t data = {0}; 
+    data.is_valid = false;
+
+    // Inicialização dos sensores
+    esp_err_t ret_air = air_sensor_init(PIN_NUM_SDA_DHT);
+    esp_err_t ret_soil = soil_sensor_init_ads1115(I2C_MASTER_NUM, ADS1115_I2C_ADDRESS, ADS1115_CHANNEL_HIG);
+    esp_err_t ret_ldr = light_sensor_init(I2C_MASTER_NUM, ADS1115_I2C_ADDRESS, ADS1115_CHANNEL_LDR);
+
+    // Verificação da inicialização
+    if (ret_air != ESP_OK || ret_soil != ESP_OK || ret_ldr != ESP_OK) {
+        ESP_LOGE(TAG, "Falha ao instanciar os drivers dos sensores. Abortando leitura.");
+        return data; // is_valid = false
+    }
+
+    // Delay para estabilização dos sensores
+    ESP_LOGI(TAG, "Aguardando estabilização dos sensores (2 segundos)...");
+    vTaskDelay(pdMS_TO_TICKS(2000));
+
+    // Leitura
+    ESP_LOGI(TAG, "Coletando amostras...");
+    ret_air = air_sensor_read(&data.air_temp, &data.air_hum);
+    ret_soil = soil_sensor_read_ads1115(&data.soil_hum);
+    ret_ldr = light_sensor_read(&data.light_perc);
+
+    // Validação
+    if (ret_air == ESP_OK && ret_soil == ESP_OK && ret_ldr == ESP_OK) {
+        data.is_valid = true; // Indicativo de uma leitura bem sucedida
+        ESP_LOGI(TAG, "Ciclo concluído com sucesso!");
+        ESP_LOGI(TAG, "Valores -> Ar: %.1fC / %.1f%% | Solo: %.1f%% | Luz: %.1f%%", 
+                 data.air_temp, data.air_hum, data.soil_hum, data.light_perc);
+    } else {
+        ESP_LOGE(TAG, "Falha de comunicação em um ou mais sensores durante a leitura.");
+        // is_valid = false
+    }
+
+    return data;
 }
