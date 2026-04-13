@@ -147,3 +147,21 @@ armazenar o arquivo de headers <nome>.h usar:
 
 * O agrupamento de funcionalidades será atingido através de funções de orquestração definidas na própria main.c
     - Exemplo: função execute_readings() ---> Chama todas as funções individuais de leituras definidas nos controladores
+
+* Fluxo de funcionamento | Máquina de Estados:
+
+    1 - Wake up -> Verifica quem foi que acordou (botão de setup ou timer) para decidir se chama o menu de configuração ou faz leituras
+    2 - Menu de configuração -> Guarda informações do usuário relevantes para a transmissão de dados no Non Volatile Storage (Cartão SD)
+    3 - Setup do hardware -> Configuração dos barramento e dos periféricos
+    4 - Ciclo de Coleta -> Chama as funções de leitura dos sensores para coletar os dados
+    5 - Armazenamento -> Guarda os dados coletads no NVS
+    6 - Transmissão -> Acorda o módulo LoRa para transmissão dos dados
+    7 - Tear Down -> Desmontagem do NVS e desalocação dos barramentos
+    8 - Deep Sleep -> Estado de baixo consumo de energia e definição do temporizador para acordar para o próximo ciclo
+
+    ! A transição entre os estados e feita apenas pelos retornos das funções de agregação uma vez que a lógica do programa é sequencial
+
+
+=============================================================== 13/04/2025 ===============================================================
+
+* Desenvolvimento da função de agregação para setup do barramento
