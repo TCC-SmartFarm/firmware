@@ -67,6 +67,8 @@ static esp_err_t system_bus_init(void);
 void app_main(void) {
     ESP_LOGI(TAG, "\n========== Inicializado! ============\n");
 
+    esp_err_t ret = system_bus_init();
+
 
 
     ESP_LOGI(TAG, "\n========== Fim do teste! ============\n");
@@ -81,19 +83,19 @@ static esp_err_t system_bus_init(void) {
     esp_err_t ret;
 
     // SPI
-    ret = shared_bus_spi_init(SPI_HOST_ID, PIN_NUM_SPI_MOSI, PIN_NUM_SPI_MISO, PIN_NUM_SPI_CLK, SPI_MAX_TRANSFER);
+    ret = bus_spi_init(SPI_HOST_ID, PIN_NUM_SPI_MOSI, PIN_NUM_SPI_MISO, PIN_NUM_SPI_CLK, SPI_MAX_TRANSFER);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Falha critica: Nao foi possivel inicializar o barramento SPI.");
         return ret;
     }
 
     // I2C
-    ret = shared_bus_i2c_init(I2C_MASTER_NUM, PIN_NUM_I2C_SDA, PIN_NUM_I2C_SCL, I2C_FREQ_HZ);
+    ret = bus_i2c_init(I2C_MASTER_NUM, PIN_NUM_I2C_SDA, PIN_NUM_I2C_SCL, I2C_FREQ_HZ);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Falha critica: Nao foi possivel inicializar o barramento I2C.");
         
         // Liberação do barramento em caso de falha
-        shared_bus_spi_free(SPI_HOST_ID);
+        bus_spi_free(SPI_HOST_ID);
         
         return ret;
     }
