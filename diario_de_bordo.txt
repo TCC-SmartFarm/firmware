@@ -68,7 +68,7 @@ armazenar o arquivo de headers <nome>.h usar:
     - Possivelmente causado por maus contatos físicos nas ligações do protoboard
     - Erro ESP_ERR_INVALID_CRC indica que a comunicação foi estabelecida, mas não conseguiu-se finalizar 
     a configuração (já é um erro mlhor que o timeout!)
-    - Redução do CLock SPI no menuconfig da ESP-IDF para 20Mhz
+    - Redução do Clock SPI no menuconfig da ESP-IDF para 20Mhz
     - Limitação por SW do clock SPI do Cartão SD
 
 * Teste bem sucedido do cartão SD!
@@ -159,14 +159,14 @@ armazenar o arquivo de headers <nome>.h usar:
     7 - Tear Down -> Desmontagem do NVS e desalocação dos barramentos
     8 - Deep Sleep -> Estado de baixo consumo de energia e definição do temporizador para acordar para o próximo ciclo
 
-    ! A transição entre os estados e feita apenas pelos retornos das funções de agregação uma vez que a lógica do programa é sequencial
+    ! A transição entre os estados e feita apenas pelos retornos das funções de orquestração uma vez que a lógica do programa é sequencial
 
 
 =============================================================== 13/04/2025 ===============================================================
 
-* Desenvolvimento da função de agregação para setup do barramento
+* Desenvolvimento da função de orquestração para setup do barramento
 
-* Desenvolvimento da função de agregação para leitura do sensores com Timestamp
+* Desenvolvimento da função de orquestração para leitura do sensores com Timestamp
     - O usuário deverá informar a data atual durante o setup para ajuste da Unix Epoch
 
 * Acompanhamento do Fluxo de funcionamento:
@@ -178,4 +178,13 @@ armazenar o arquivo de headers <nome>.h usar:
     5 - Armazenamento
     6 - Transmissão 
     7 - Tear Down 
-    8 - Deep Sleep 
+    8 - Deep Sleep
+
+=============================================================== 15/04/2025 ===============================================================
+
+* Desenvolvimento da função de orquestração para gravação dos dados no cartão SD usando as funções definidas no storage_controller
+
+* Problemas de alimentação do cartão SD podem levar a erros de timeout!
+    - O que estava funcionando uma vez pode parar do nada sem motivo aparente -> Mexer na fiação, mudar de casa no protoboard
+
+* Teste com vários ciclos de leitura

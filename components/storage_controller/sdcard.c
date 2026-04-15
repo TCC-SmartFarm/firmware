@@ -28,11 +28,13 @@ esp_err_t sdcard_config(spi_host_device_t host_id, int cs_pin, const char* mount
 
     ESP_LOGI(TAG, "Iniciando o cartão SD...");
 
+    ESP_LOGI(TAG, "Tentando acoplar ao barramento...");
     // Configuração do host SD via SPI 
     sdmmc_host_t host = SDSPI_HOST_DEFAULT();
     host.slot = host_id; // Acopla ao barramento SPI externo já inicializado
-    host.max_freq_khz = 4000; // Reduçõa do clock para testes no protoboard
+    host.max_freq_khz = 400; // Reduçõa do clock para testes no protoboard
 
+    ESP_LOGI(TAG, "Tentando configurar o pino de CS...");
     //Configuração do pino CS e host no dispositivo
     sdspi_device_config_t slot_config = SDSPI_DEVICE_CONFIG_DEFAULT();
     slot_config.gpio_cs = cs_pin;

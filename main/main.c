@@ -47,7 +47,7 @@ static const char *TAG = "main";
 
 // Cartão SD
 #define PIN_NUM_SPI_CS_SD        5
-
+#define MOUNT_POINT              "/sdcard"  // Ponto de montagem
 
 // DHT
 #define PIN_NUM_SDA_DHT             13
@@ -82,7 +82,14 @@ static esp_err_t system_bus_init(void);
  */
 static sensor_data_t execute_reading_cycle(void);
 
+/**
+ * @brief Monta o sistema de arquivos, formata o pacote em CSV e anexa os dados.
+ * @param data Ponteiro para a struct contendo os dados do ciclo.
+ */
+static void save_to_sd_card(const sensor_data_t *data);
+
 void app_main(void) {
+
     ESP_LOGI(TAG, "\n========== Inicializado! ============\n");
 
     // Setup
@@ -91,7 +98,7 @@ void app_main(void) {
         while (1) { vTaskDelay(pdMS_TO_TICKS(1000)); } // Trava o sistema
     }
 
-    //  Coleta
+    //  Leitura e gravação
     while (1) {
         ESP_LOGI(TAG, "--- Iniciando novo ciclo de leitura ---");
         
@@ -107,11 +114,17 @@ void app_main(void) {
         } else {
             ESP_LOGE(TAG, "Leitura com falha... Descartando");
         }
+
+        
+
+        ESP_LOGI(TAG, "--- Salvando... ---");
+        save_to_sd_card(&current_data);
+        
+        ESP_LOGI(TAG, "--- Ciclo finalizado. Aguardando 5 segundos ---");
+        vTaskDelay(pdMS_TO_TICKS(5000));
         
         ESP_LOGI(TAG, "---------------------------------------");
 
-        // Delay entre testes
-        vTaskDelay(pdMS_TO_TICKS(3000));
     }
 
 
@@ -150,6 +163,7 @@ static esp_err_t system_bus_init(void) {
 }
 
 static sensor_data_t execute_reading_cycle(void) {
+
     ESP_LOGI(TAG, "Iniciando ciclo de aquisição de dados...");
     
     // Inicialização da struct
@@ -187,9 +201,63 @@ static sensor_data_t execute_reading_cycle(void) {
         ESP_LOGI(TAG, "Timestamp - %i | Valores -> Ar: %.1fC / %.1f%% | Solo: %.1f%% | Luz: %.1f%%", 
                  data.timestamp, data.air_temp, data.air_hum, data.soil_hum, data.light_perc);
     } else {
-        ESP_LOGE(TAG, "Falha de comunicação em um ou mais sensores durante a leitura.");
-        // is_valid = false
+        ESP_LOGE(TAG, "Falha de comunicação em um ou mais sensores durante a leitura."); // is_valid = false
     }
 
     return data;
 }
+
+static void save_to_sd_card(const sensor_data_t *data){
+
+    // Verificação de integridade
+    if (!data->is_valid) {
+        ESP_LOGW(TAG, "Dados de sensores inválidos. Gravação no SD abortada.");
+        return;
+    }
+
+    // Montagem do sistema de arquivo
+    ESP_LOGI(TAG, "Montando o cartão SD...");
+    if (sdcard_config(SPI_HOST_ID, PIN_NUM_SPI_CS_SD, MOUNT_POINT) != ESP_OK) {
+        ESP_LOGE(TAG, "Falha ao acoplar o cartão SD. Abortando armazenamento.");
+        return;
+    }
+
+    // Montagem da string a ser gravada
+    ESP_LOGI(TAG, "Formatando dados em CSV...");
+    char csv_buffer[128];
+    snprintf(csv_buffer, sizeof(csv_buffer), "%lld,%.2f,%.2f,%.2f,%.2f", 
+             (long long)data->timestamp, 
+             data->air_temp, 
+             data->air_hum, 
+             data->soil_hum, 
+             data->light_perc);
+
+
+    // Gravação da linha no arquivo
+    ESP_LOGI(TAG, "Gravando linha no arquivo...");
+    if (sdcard_write("/sdcard/readings.csv", csv_buffer) != ESP_OK) {
+        ESP_LOGE(TAG, "Falha na escrita dos dados.");
+    }
+
+    // Desmontagem do sistema de arquivo
+    ESP_LOGI(TAG, "Desmontando o cartão SD...");
+    sdcard_unmount(MOUNT_POINT);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
