@@ -188,3 +188,13 @@ armazenar o arquivo de headers <nome>.h usar:
     - O que estava funcionando uma vez pode parar do nada sem motivo aparente -> Mexer na fiação, mudar de casa no protoboard
 
 * Teste com vários ciclos de leitura
+    - OK!
+
+    1 - Wake up 
+    2 - Menu de configuração 
+    3 - Setup do hardware -------- OK!
+    4 - Ciclo de Coleta ---------- OK!
+    5 - Armazenamento ------------ OK!
+    6 - Transmissão 
+    7 - Tear Down 
+    8 - Deep Sleep
