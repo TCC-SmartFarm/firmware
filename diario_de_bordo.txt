@@ -199,8 +199,28 @@ armazenar o arquivo de headers <nome>.h usar:
     7 - Tear Down 
     8 - Deep Sleep
 
-=============================================================== /04/2025 ===============================================================
+=============================================================== 22/04/2025 ===============================================================
 
 * Desenvolvimento da função de orquestração de Tear Down (Desacoplamento dos barramentos)
 
-* Teste com vários ciclos de leitura
+* Teste com vários ciclos de sleep/wakeup
+    - OK!
+
+
+* Incluir um resistor de pull down no botão de setup para evitar o wakeup indevido
+
+    1 - Wake up ------------------ OK!
+    2 - Menu de configuração 
+    3 - Setup do hardware -------- OK!
+    4 - Ciclo de Coleta ---------- OK!
+    5 - Armazenamento ------------ OK!
+    6 - Transmissão 
+    7 - Tear Down ---------------- OK!
+    8 - Deep Sleep --------------- OK!
+
+* Definições para o componente de Menu:
+    - Recebimento de informações do usuário via UART (USB + terminal) ----> uart_controller
+    - Recebimento de informações do usuário via Wi-Fi (arquivo via app) --> wifi_controller
+    - Armazenamento dos parâmetros de configuração no NVS do ESP ---------> device_config
+    - Orquestração -------------------------------------------------------> menu_controller
+

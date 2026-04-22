@@ -11,6 +11,7 @@ Arquivo contendo o loop principal de execução.
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
+#include "esp_sleep.h"
 
 // Includes dos componetes
 #include "bus.h"
@@ -110,11 +111,7 @@ void app_main(void) {
         while (1) { vTaskDelay(pdMS_TO_TICKS(1000)); } // Trava o sistema
     }
 
-    //  Leitura e gravação
-    while (1) {
-        ESP_LOGI(TAG, "--- Iniciando novo ciclo de leitura ---");
-        
-        // Chama a funçao de leitura
+            // Chama a funçao de leitura
         sensor_data_t current_data = execute_reading_cycle();
 
         // Construção da struct
@@ -132,12 +129,8 @@ void app_main(void) {
         ESP_LOGI(TAG, "--- Salvando... ---");
         save_to_sd_card(&current_data);
         
-        ESP_LOGI(TAG, "--- Ciclo finalizado. Aguardando 5 segundos ---");
-        vTaskDelay(pdMS_TO_TICKS(5000));
-        
-        ESP_LOGI(TAG, "---------------------------------------");
-
-    }
+        ESP_LOGI(TAG, "--- Ciclo finalizado. Iniciando Tear Down ---");
+        prepare_deep_sleep_and_shutdown();
 
 
     ESP_LOGI(TAG, "\n========== Fim do teste! ============\n");
@@ -269,7 +262,7 @@ static void prepare_deep_sleep_and_shutdown(void) {
     ESP_LOGI(TAG, "Despertador configurado para %i minutos.", SLEEP_DURATION_MIN);
 
     // Definindo a fonte externa de Wake-Up (Botão ---> Menu de configuração)
-    esp_sleep_enable_ext0_wakeup(PIN_NUM_SETUP_BUTTON, 1); 
+    //esp_sleep_enable_ext0_wakeup(PIN_NUM_SETUP_BUTTON, 1); 
 
 
     ESP_LOGI(TAG, "Dromindo...");
@@ -277,6 +270,7 @@ static void prepare_deep_sleep_and_shutdown(void) {
     // Delay para registro da mmensagem
     vTaskDelay(pdMS_TO_TICKS(100)); 
 
+    // Entra em deep sleep
     esp_deep_sleep_start();
 }
 
