@@ -198,3 +198,9 @@ armazenar o arquivo de headers <nome>.h usar:
     6 - Transmissão 
     7 - Tear Down 
     8 - Deep Sleep
+
+=============================================================== /04/2025 ===============================================================
+
+* Desenvolvimento da função de orquestração de Tear Down (Desacoplamento dos barramentos)
+
+* Teste com vários ciclos de leitura

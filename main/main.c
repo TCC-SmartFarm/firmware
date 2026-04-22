@@ -23,6 +23,11 @@ static const char *TAG = "main";
 
 /* ------------------------------ Pinagens e Constantes --------------------------------------*/
 
+// DeepSleep
+#define SLEEP_DURATION_MIN          1 // Tempo que o módul deverá passar em deepsleep em minutos
+
+// Botão de Menu
+#define PIN_NUM_SETUP_BUTTON        33 
 
 // Barramento I²C
 #define PIN_NUM_I2C_SCL             22
@@ -87,6 +92,13 @@ static sensor_data_t execute_reading_cycle(void);
  * @param data Ponteiro para a struct contendo os dados do ciclo.
  */
 static void save_to_sd_card(const sensor_data_t *data);
+
+/**
+ * @brief Liberta os barramentos, desliga periféricos e define como acordar do Deep Sleep.
+ */
+static void prepare_deep_sleep_and_shutdown(void);
+
+/* ------------------------------ Loop Principal - app_main()  --------------------------------------*/
 
 void app_main(void) {
 
@@ -244,7 +256,29 @@ static void save_to_sd_card(const sensor_data_t *data){
     sdcard_unmount(MOUNT_POINT);
 }
 
+static void prepare_deep_sleep_and_shutdown(void) {
+    ESP_LOGI(TAG, "Iniciando Tear Down do sistema...");
 
+    //Liberação dos barramentos
+    bus_i2c_free(I2C_MASTER_NUM);
+    bus_spi_free(SPI_HOST_ID);
+
+    // Definindo o despertador
+    const uint64_t wakeup_time_sec = SLEEP_DURATION_MIN * 60; // Minutos para segundos
+    esp_sleep_enable_timer_wakeup(wakeup_time_sec * 1000000ULL); // Segundos para microssegundos
+    ESP_LOGI(TAG, "Despertador configurado para %i minutos.", SLEEP_DURATION_MIN);
+
+    // Definindo a fonte externa de Wake-Up (Botão ---> Menu de configuração)
+    esp_sleep_enable_ext0_wakeup(PIN_NUM_SETUP_BUTTON, 1); 
+
+
+    ESP_LOGI(TAG, "Dromindo...");
+    
+    // Delay para registro da mmensagem
+    vTaskDelay(pdMS_TO_TICKS(100)); 
+
+    esp_deep_sleep_start();
+}
 
 
 
