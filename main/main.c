@@ -46,12 +46,12 @@ static const char *TAG = "main";
 
 
 
-// Conversor AD externo - ADS1115
+// Conversor AD externo - ADS1115 (I²C)
 #define ADS1115_I2C_ADDRESS         0x48    // Endereço padrão (ADDR ligado em GND)
 #define ADS1115_CHANNEL_HIG         0       // Canal A0 -> Higrômetro
 #define ADS1115_CHANNEL_LDR         1       // Canal A1 -> LDR
 
-// Cartão SD
+// Cartão SD (SPI)
 #define PIN_NUM_SPI_CS_SD        5
 #define MOUNT_POINT              "/sdcard"  // Ponto de montagem
 

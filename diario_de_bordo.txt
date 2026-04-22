@@ -209,7 +209,7 @@ armazenar o arquivo de headers <nome>.h usar:
 
 * Incluir um resistor de pull down no botão de setup para evitar o wakeup indevido
 
-    1 - Wake up ------------------ OK!
+    1 - Wake up ------------------ OK! (teste apenas com o timer interno)
     2 - Menu de configuração 
     3 - Setup do hardware -------- OK!
     4 - Ciclo de Coleta ---------- OK!
@@ -224,3 +224,7 @@ armazenar o arquivo de headers <nome>.h usar:
     - Armazenamento dos parâmetros de configuração no NVS do ESP ---------> device_config
     - Orquestração -------------------------------------------------------> menu_controller
 
+* device_config:
+    - Armazenamento da struct de configuração como um Binary Large Object (Blob) -> Atomicidade e Consistência
+    - Usando o Blob, ou grava-se a struct inteira o não grava nada
+    - Reduz a fragmentação do NVS
