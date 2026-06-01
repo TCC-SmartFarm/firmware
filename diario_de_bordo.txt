@@ -1,4 +1,4 @@
-=============================================================== 12/02/2025 ===============================================================
+=============================================================== 12/02/2026 ===============================================================
 
 * Instalação do pacote esp-idf-lib/dht 
     idf.py add-component "CAMINHO_DA_PASTA"
@@ -6,7 +6,7 @@
 * Lembrar de instalar as dependencas pelo console da ESP-IDF, nao o proprio terminal
     Se não abrir, usar >ESP-IDF: Open ESP-IDF Terminal
 
-=============================================================== 13/02/2025 ===============================================================
+=============================================================== 13/02/2026 ===============================================================
 
 * Após instalação de um componente, preencher o arquivo CMakeLists.txt DENTRO DA PASTA
 MAIN para informar a ESP-IDF que o pacote deve ser incluido na build do projeto.
@@ -28,20 +28,20 @@ MAIN para informar a ESP-IDF que o pacote deve ser incluido na build do projeto.
     - INCLUDE_DIRS: arquivos .h a fim de permitir o Include em outras pastas
     - REQUIRES: pastas do componentes adicionados via o comando add-components
 
-=============================================================== 16/02/2025 ===============================================================
+=============================================================== 16/02/2026 ===============================================================
 
 * Remoção do componente maucke/sdcard
     - O core da ESP-IDF já possui drivers capazes de interagir com cartões SD via SPI e
     SDMMC
     - Localizado na pasta ~esp/v5.5.2/esp-idf/components/esp_driver_sdspi
 
-=============================================================== 23/02/2025 ===============================================================
+=============================================================== 23/02/2026 ===============================================================
 
 * Antes de usar qualquer periférico, deve-se configurar:
     - Primeiro o bus de comunicação
     - Então, "atrelar" o device ao bus configurado para começar a fazer operações de IO
 
-=============================================================== 03/03/2025 ===============================================================
+=============================================================== 03/03/2026 ===============================================================
 
 * Tentativa de primeiro Flash do ESP - Porta de Cima do Notebook -> /dev/ttyUSB0
 
@@ -49,20 +49,20 @@ MAIN para informar a ESP-IDF que o pacote deve ser incluido na build do projeto.
 
 * Teste com um novo projeto de hello world -> Funcionou! Primeira build com o SO ok!
 
-=============================================================== 04/03/2025 ===============================================================
+=============================================================== 04/03/2026 ===============================================================
 
 * No arquivo CMakeLists.txt de cada controller, caso não opte-se por criar uma pasta "/include" apenas para
 armazenar o arquivo de headers <nome>.h usar:
     ... INCLUDE_DIRS "."
 
 
-=============================================================== 09/03/2025 ===============================================================
+=============================================================== 09/03/2026 ===============================================================
 
 * Para a configuração das interfaces SPI:
     - Conpartilhar aa interface entre o módulo de cartão SD e o LoRa
     - Alterar apenas o parâmetro CHIP SELECT na hora da comunicação
 
-=============================================================== 16/03/2025 ===============================================================
+=============================================================== 16/03/2026 ===============================================================
 
 * Problemas na inicialização do cartão SD:
     - Possivelmente causado por maus contatos físicos nas ligações do protoboard
@@ -79,7 +79,7 @@ armazenar o arquivo de headers <nome>.h usar:
     - ESP não flasha se o DHT estiver alimentado (?)
 
 
-=============================================================== 23/03/2025 ===============================================================
+=============================================================== 23/03/2026 ===============================================================
 
 * Debug do DHT22 suspenso! Testar com um voltímetro quando possível.
 
@@ -87,7 +87,7 @@ armazenar o arquivo de headers <nome>.h usar:
     - Pino de entrada analógica do ESP32
     - Utilização do conversor A/D ADS1115 -> Requer a configuração do barramento I²C
     
-=============================================================== 30/03/2025 ===============================================================
+=============================================================== 30/03/2026 ===============================================================
 
 * Abandono do uso do conversor AD interno do ESP:
     - Usa menos bits que o conversor externo
@@ -134,7 +134,7 @@ armazenar o arquivo de headers <nome>.h usar:
 
 * Teste do higrômetro OK!!
 
-=============================================================== 01/04/2025 ===============================================================
+=============================================================== 01/04/2026 ===============================================================
 
 * Debug DHT:
     - Problema de Pinagem! Após troca do GPIO utilizado no teste, funcionou.
@@ -162,7 +162,7 @@ armazenar o arquivo de headers <nome>.h usar:
     ! A transição entre os estados e feita apenas pelos retornos das funções de orquestração uma vez que a lógica do programa é sequencial
 
 
-=============================================================== 13/04/2025 ===============================================================
+=============================================================== 13/04/2026 ===============================================================
 
 * Desenvolvimento da função de orquestração para setup do barramento
 
@@ -180,7 +180,7 @@ armazenar o arquivo de headers <nome>.h usar:
     7 - Tear Down 
     8 - Deep Sleep
 
-=============================================================== 15/04/2025 ===============================================================
+=============================================================== 15/04/2026 ===============================================================
 
 * Desenvolvimento da função de orquestração para gravação dos dados no cartão SD usando as funções definidas no storage_controller
 
@@ -199,7 +199,7 @@ armazenar o arquivo de headers <nome>.h usar:
     7 - Tear Down 
     8 - Deep Sleep
 
-=============================================================== 22/04/2025 ===============================================================
+=============================================================== 22/04/2026 ===============================================================
 
 * Desenvolvimento da função de orquestração de Tear Down (Desacoplamento dos barramentos)
 
@@ -239,3 +239,41 @@ armazenar o arquivo de headers <nome>.h usar:
 * Ideia -> Fazer um módulo comunicar com o outro até chegar em um gateway/wifi
 
 * Ideia -> Coletar as informações de geolocalização para linkar ccom a API da Embrapa para prever os dado de chuva
+
+
+
+=============================================================== 01/06/2026 ===============================================================
+
+----> To-Do's
+    - Correção do ciclo de leituras (realizar varias leituras e tirar a média)
+    - Correção da Chamada de horário do RTC interno (atualiza só no momento que o esp é ligado a primeira vez)
+    - Calibragem dos sensores!
+    - Tratar o caso do SD estar cheio -> descartar o resgistro mais antigo para poder gravar o novo
+
+
+
+
+
+=============================================================== /0/2026 ===============================================================
+
+
+
+
+
+
+=============================================================== /0/2026 ===============================================================
+
+
+
+
+
+
+
+=============================================================== /0/2026 ===============================================================
+
+
+
+
+
+
+=============================================================== /0/2026 ===============================================================

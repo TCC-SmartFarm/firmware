@@ -19,6 +19,7 @@ Arquivo contendo o loop principal de execução.
 #include "air_sensor.h"
 #include "soil_sensor.h"
 #include "light_sensor.h"
+#include "device_config.h"
 
 static const char *TAG = "main";
 
@@ -99,38 +100,16 @@ static void save_to_sd_card(const sensor_data_t *data);
  */
 static void prepare_deep_sleep_and_shutdown(void);
 
+static void test_nvs_storage(void);
+
 /* ------------------------------ Loop Principal - app_main()  --------------------------------------*/
 
 void app_main(void) {
 
     ESP_LOGI(TAG, "\n========== Inicializado! ============\n");
 
-    // Setup
-    if (system_bus_init() != ESP_OK) {
-        ESP_LOGE(TAG, "Falha na inicialização do hardware base. Teste abortado.");
-        while (1) { vTaskDelay(pdMS_TO_TICKS(1000)); } // Trava o sistema
-    }
-
-            // Chama a funçao de leitura
-        sensor_data_t current_data = execute_reading_cycle();
-
-        // Construção da struct
-        if (current_data.is_valid) {
-            ESP_LOGI(TAG, "Leitura OK!");
-            ESP_LOGI(TAG, "Ar: %.1fC | Umidade: %.1f%%", current_data.air_temp, current_data.air_hum);
-            ESP_LOGI(TAG, "Solo: %.1f%%", current_data.soil_hum);
-            ESP_LOGI(TAG, "Luz: %.1f%%", current_data.light_perc);
-        } else {
-            ESP_LOGE(TAG, "Leitura com falha... Descartando");
-        }
-
-        
-
-        ESP_LOGI(TAG, "--- Salvando... ---");
-        save_to_sd_card(&current_data);
-        
-        ESP_LOGI(TAG, "--- Ciclo finalizado. Iniciando Tear Down ---");
-        prepare_deep_sleep_and_shutdown();
+    // Teste do NVS
+    test_nvs_storage();
 
 
     ESP_LOGI(TAG, "\n========== Fim do teste! ============\n");
@@ -267,11 +246,62 @@ static void prepare_deep_sleep_and_shutdown(void) {
 
     ESP_LOGI(TAG, "Dromindo...");
     
-    // Delay para registro da mmensagem
+    // Delay para registro da mensagem
     vTaskDelay(pdMS_TO_TICKS(100)); 
 
     // Entra em deep sleep
     esp_deep_sleep_start();
+}
+
+static void test_nvs_storage(void) {
+    ESP_LOGI(TAG, "\n====== INICIANDO TESTE DO NVS ======\n");
+
+    //Inicialização
+    if (device_config_init() != ESP_OK) {
+        ESP_LOGE(TAG, "Falha crítica ao inicializar o NVS.");
+        return;
+    }
+
+    // Mock do struct
+    user_config_t dummy_config = {0};
+    strncpy(dummy_config.device_name, "Sensor_Estufa_01", sizeof(dummy_config.device_name) - 1);
+    strncpy(dummy_config.lora_gw_ip, "192.168.1.100", sizeof(dummy_config.lora_gw_ip) - 1);
+    strncpy(dummy_config.password, "senha_super_segura", sizeof(dummy_config.password) - 1);
+    dummy_config.setup_date = 1713190000;
+    dummy_config.is_configured = true;
+
+    ESP_LOGI(TAG, "Salvando configurações fictícias na memória Flash...");
+    if (device_config_save(&dummy_config) != ESP_OK) {
+        ESP_LOGE(TAG, "Falha ao salvar no NVS.");
+    }
+
+
+    // Struct vazia para receber as configurações da memória flash
+    user_config_t read_config = {0};
+
+    // Recuperação dos dados
+    ESP_LOGI(TAG, "Lendo configurações da memória Flash...");
+    if (device_config_load(&read_config) == ESP_OK) {
+        ESP_LOGI(TAG, "--- DADOS RECUPERADOS COM SUCESSO ---");
+        ESP_LOGI(TAG, "Nome do Device : %s", read_config.device_name);
+        ESP_LOGI(TAG, "IP do Gateway  : %s", read_config.lora_gw_ip);
+        ESP_LOGI(TAG, "Senha          : %s", read_config.password);
+        ESP_LOGI(TAG, "Epoch          : %lu", read_config.setup_date);
+        ESP_LOGI(TAG, "Configurado    : %s", read_config.is_configured ? "SIM" : "NAO");
+        ESP_LOGI(TAG, "-------------------------------------");
+    } else {
+        ESP_LOGE(TAG, "Falha na leitura dos dados. Partição pode estar vazia ou corrompida.");
+    }
+
+    /*// Teste de Reset 
+     ESP_LOGI(TAG, "Apagando configurações...");
+     device_config_reset();
+     if (device_config_load(&read_config) != ESP_OK) {
+     ESP_LOGI(TAG, "Sucesso: Os dados foram apagados e já não existem no NVS.");
+     }
+     */
+
+    ESP_LOGI(TAG, "\n====== FIM DO TESTE DO NVS ======\n");
 }
 
 

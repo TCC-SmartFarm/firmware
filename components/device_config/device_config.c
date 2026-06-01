@@ -26,8 +26,91 @@ esp_err_t device_config_init(void) {
     }
     
     if (ret == ESP_OK) {
-        ESP_LOGI(TAG, "Subsistema NVS inicializado com sucesso.");
+        ESP_LOGI(TAG, "NVS inicializado com sucesso.");
     }
     
     return ret;
+}
+
+
+esp_err_t device_config_save(const user_config_t *config) {
+    
+    nvs_handle_t nvs_handle;
+    esp_err_t err;
+
+    // Abertura do NVS
+    err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &nvs_handle);
+    if (err != ESP_OK) return err;
+
+    // Gravação do BLOB
+    err = nvs_set_blob(nvs_handle, NVS_BLOB_KEY, config, sizeof(user_config_t));
+    if (err != ESP_OK) {
+        nvs_close(nvs_handle);
+        return err;
+    }
+
+    // Commit no NVS
+    err = nvs_commit(nvs_handle);
+    
+    // Fechamento do sistema de arquivo
+    nvs_close(nvs_handle);
+
+    if (err == ESP_OK) {
+        ESP_LOGI(TAG, "Configurações salvas no NVS.");
+    }
+
+    return err;
+}
+
+
+esp_err_t device_config_load(user_config_t *out_config) {
+
+    nvs_handle_t nvs_handle;
+    esp_err_t err;
+    size_t required_size = sizeof(user_config_t);
+
+    // Abre o sistema de arquivos
+    err = nvs_open(NVS_NAMESPACE, NVS_READONLY, &nvs_handle);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Falha ao abrir NVS para leitura. Primeira vez por aqui?");
+        return err;
+    }
+
+    // Verificação da gravação
+    err = nvs_get_blob(nvs_handle, NVS_BLOB_KEY, out_config, &required_size);
+    
+    // Fechamento do sistema de arquivo
+    nvs_close(nvs_handle);
+
+    if (err == ESP_OK) {
+        ESP_LOGI(TAG, "Configurações carregadas da memória Flash.");
+    } else {
+        ESP_LOGW(TAG, "Nenhum dado de configuração encontrado ou erro na leitura.");
+    }
+
+    return err;
+}
+
+esp_err_t device_config_reset(void) {
+    nvs_handle_t nvs_handle;
+    esp_err_t err;
+
+    // Abre o sistema de arquivos
+    err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &nvs_handle);
+    if (err != ESP_OK) return err;
+
+    // Apaga o namespace user_cfg
+    err = nvs_erase_all(nvs_handle);
+    if (err == ESP_OK) {
+        err = nvs_commit(nvs_handle);
+    }
+
+    // Fechamento do sistema de arquivo
+    nvs_close(nvs_handle);
+    
+    if (err == ESP_OK) {
+        ESP_LOGI(TAG, "Configurações de utilizador apagadas com sucesso.");
+    }
+
+    return err;
 }
