@@ -228,3 +228,14 @@ armazenar o arquivo de headers <nome>.h usar:
     - Armazenamento da struct de configuração como um Binary Large Object (Blob) -> Atomicidade e Consistência
     - Usando o Blob, ou grava-se a struct inteira o não grava nada
     - Reduz a fragmentação do NVS
+
+----> To-Do's
+    - Correção do ciclo de leituras (realizar varias leituras e tirar a média)
+    - Correção da Chamada de horário do RTC interno (atualiza só no momento que o esp é ligado a primeira vez)
+    - Calibragem dos sensores!
+    - Tratar o caso do SD estar cheio -> descartar o resgistro mais antigo para poder gravar o novo
+
+
+* Ideia -> Fazer um módulo comunicar com o outro até chegar em um gateway/wifi
+
+* Ideia -> Coletar as informações de geolocalização para linkar ccom a API da Embrapa para prever os dado de chuva
