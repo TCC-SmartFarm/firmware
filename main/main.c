@@ -20,6 +20,7 @@ Arquivo contendo o loop principal de execução.
 #include "soil_sensor.h"
 #include "light_sensor.h"
 #include "device_config.h"
+#include "serial_cli.h"
 
 static const char *TAG = "main";
 
@@ -108,8 +109,39 @@ void app_main(void) {
 
     ESP_LOGI(TAG, "\n========== Inicializado! ============\n");
 
-    // Teste do NVS
-    test_nvs_storage();
+   // 1. Inicializa o subsistema NVS
+    if (device_config_init() != ESP_OK) {
+        ESP_LOGE(TAG, "Falha critica ao inicializar NVS. Travando o sistema.");
+        while(1) { vTaskDelay(pdMS_TO_TICKS(1000)); }
+    }
+
+    // 2. Carrega as configurações para verificar o estado
+    user_config_t config = {0};
+    device_config_load(&config);
+
+    // 3. Lógica de Roteamento
+    if (!config.is_configured) {
+        ESP_LOGI(TAG, "Dispositivo nao configurado. Chamando o Menu Serial...");
+        
+        if (cli_config_start() == ESP_OK) {
+            ESP_LOGI(TAG, "Tarefa CLI criada com sucesso. Aguardando interacao...");
+            // A função app_main encerra aqui, mas o FreeRTOS mantém a uart_cli_task rodando em background.
+        } else {
+            ESP_LOGE(TAG, "Falha ao iniciar o controlador UART.");
+        }
+    } else {
+        ESP_LOGI(TAG, "Dispositivo ja configurado! Iniciando ciclo operacional...");
+        
+        // Imprime os dados recuperados para confirmar o sucesso do setup
+        ESP_LOGI(TAG, "--- DADOS ATUAIS ---");
+        ESP_LOGI(TAG, "Nome : %s", config.device_name);
+        ESP_LOGI(TAG, "IP   : %s", config.lora_gw_ip);
+        ESP_LOGI(TAG, "Epoch: %lu", config.setup_date);
+        ESP_LOGI(TAG, "--------------------");
+
+        ESP_LOGW(TAG, "Apagando a memoria para o proximo teste...");
+        device_config_reset();
+    }
 
 
     ESP_LOGI(TAG, "\n========== Fim do teste! ============\n");

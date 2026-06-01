@@ -1,0 +1,242 @@
+/*
+
+Arquivo destinado a apresentar o menu de configuração no terminal para o usuário. Assume que o usuário esteja conectado ao ESP32 com um cabo serial
+
+*/
+
+// Includes
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
+#include <sys/time.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "driver/uart.h"
+#include "esp_log.h"
+#include "device_config.h"
+#include "serial_cli.h"
+
+// Defines
+#define EX_UART_NUM UART_NUM_0
+#define BUF_SIZE (256)
+
+// Constantes
+static const char *TAG = "serial_cli";
+static user_config_t temp_config = {0}; // Ver o arquivo ---> device_config/device_config.h
+
+typedef enum {
+    STATE_MAIN_MENU,
+    STATE_WAIT_MAIN_MENU_INPUT,
+    STATE_SUBMENU_INPUT
+} cli_state_t; // Maquina de estados para o menu de configuração
+
+// Definição do estado inicial
+static cli_state_t estado_atual = STATE_MAIN_MENU;
+static int submenu_atual = -1; 
+
+static void print_main_menu(void) {
+
+    // Exibição das opções no terminal
+    printf("\n-+H+-+H+-+H+-+H+-+H+-+H+-+H+-+H+-+H+-\n");
+    printf("        MENU DE CONFIGURACAO      \n");
+    printf("-+H+-+H+-+H+-+H+-+H+-+H+-+H+-+H+-+H+-\n \n");
+    printf("[1] Nome do Dispositivo : %s\n", temp_config.device_name[0] ? temp_config.device_name : "(vazio)");
+    printf("[2] IP do Gateway LoRa  : %s\n", temp_config.lora_gw_ip[0] ? temp_config.lora_gw_ip : "(vazio)");
+    printf("[3] Senha               : %s\n", temp_config.password[0] ? temp_config.password : "(vazio)");
+    printf("[4] Data e Hora Atual   : %lu\n",temp_config.setup_date);
+    printf("[8] Ver Configuracoes Atuais \n");
+    printf("[9] Salvar e Sair\n");
+    printf("==================================\n");
+    printf("Escolha uma opcao: ");
+    fflush(stdout);
+}
+
+static void print_current_flash_config(void) {
+    // Mostra as configurações já existentes na memória flash
+
+    // Extrai as informações da memória flash
+    user_config_t flash_cfg = {0};
+
+    // Exibe no terminal
+    if (device_config_load(&flash_cfg) == ESP_OK) {
+        printf("\n-+H+- DADOS GRAVADOS NA MEMORIA -+H+-\n");
+        printf("Nome do Dispositivo : %s\n", flash_cfg.device_name);
+        printf("IP do Gateway LoRa  : %s\n", flash_cfg.lora_gw_ip);
+        printf("Data e Hora         : %lu\n", flash_cfg.setup_date);
+        printf("Senha               : %s\n", flash_cfg.password);
+        printf("-+H+-+H+-+H+-+H+-+H+-+H+-+H+-+H+-+H+-\n");
+    } else {
+        printf("\n[!] Nenhuma configuracao previa encontrada na memoria.\n");
+    }
+}
+
+// Função principal
+esp_err_t cli_config_start(void) {
+    
+    // Configuração da comunicação serial
+    uart_config_t uart_config = {
+        .baud_rate = 115200,
+        .data_bits = UART_DATA_8_BITS,
+        .parity    = UART_PARITY_DISABLE,
+        .stop_bits = UART_STOP_BITS_1,
+        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+        .source_clk = UART_SCLK_DEFAULT,
+    };
+    
+    // Instalação dos drivers e verificação
+    ESP_ERROR_CHECK(uart_driver_install(EX_UART_NUM, BUF_SIZE * 2, 0, 0, NULL, 0));
+    ESP_ERROR_CHECK(uart_param_config(EX_UART_NUM, &uart_config));
+    ESP_ERROR_CHECK(uart_set_pin(EX_UART_NUM, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+
+    // Pré configurações
+    uint8_t data[BUF_SIZE];
+    char input_buffer[BUF_SIZE];
+    int input_pos = 0;
+    
+    // Carregamento da configuração prévia
+    device_config_load(&temp_config);
+
+    // Loop principal
+    while (1) {
+        // Definição do estado inicial
+        if (estado_atual == STATE_MAIN_MENU) {
+            print_main_menu();
+            estado_atual = STATE_WAIT_MAIN_MENU_INPUT;
+        }
+        
+        // Prepara para ler o próximo caractere na serial
+        int len = uart_read_bytes(EX_UART_NUM, data, BUF_SIZE - 1, pdMS_TO_TICKS(20));
+
+        // Tratativa de input ---> Backspace e delete
+        if (len > 0) {
+            for (int i = 0; i < len; i++) {
+                char c = (char)data[i];
+
+                if (c == '\b' || c == 0x7F) {
+                    if (input_pos > 0) {
+                        input_pos--;
+                        printf("\b \b");
+                        fflush(stdout);
+                    }
+                }
+
+                // Tratativa de input ---> Seleção da opção
+                else if (c == '\r' || c == '\n') {
+                    input_buffer[input_pos] = '\0'; 
+                    
+                    if (estado_atual == STATE_WAIT_MAIN_MENU_INPUT) {
+                        if (input_pos > 0) {
+                            int option = input_buffer[0] - '0';
+
+                            // Opções dos submenus
+                            if (option >= 1 && option <= 4) {
+                                submenu_atual = option;
+                                estado_atual = STATE_SUBMENU_INPUT;
+                                if (option == 4) {
+                                    printf("\n \n> Insira a data e hora (AAAA-MM-DD HH:mm): ");
+                                } else {
+                                    printf("\n \n> Insira o novo valor (Enter para confirmar): ");
+                                }
+                                fflush(stdout); // Flush od buffer para exibição imediata dos submenus
+
+                            // Exibição das configurações pré-existentes    
+                            } else if (option == 8) {
+                                print_current_flash_config();
+                                estado_atual = STATE_MAIN_MENU;
+
+                            // Salvar e Sair
+                            } else if (option == 9) {
+                                printf("\n \nSalvando...\n");
+                                temp_config.is_configured = true;
+                                device_config_save(&temp_config);
+                                printf("\n Configuracao salva com sucesso! O dispositivo sera reiniciado.\n");
+                                vTaskDelay(pdMS_TO_TICKS(1000));
+                                
+                                // Reinicialização do ESP ja configurado
+                                esp_restart(); 
+
+                            // Tratativa de input ---> Input Inválido
+                            } else {
+                                printf("\n \n[!] Opcao invalida.\n");
+                                estado_atual = STATE_MAIN_MENU;
+                            }
+                        }
+
+                    // Configuração dos Submenus
+                    } else if (estado_atual == STATE_SUBMENU_INPUT) {
+                        if (input_pos > 0) {
+
+                            // Submenu ---> Nome do dispositivo
+                            if (submenu_atual == 1) {
+                                strncpy(temp_config.device_name, input_buffer, sizeof(temp_config.device_name) - 1);
+                                printf("\n[+] Entrada recebida!\n");
+
+                             // Submenu ---> IP do Gateway LoRa
+                            } else if (submenu_atual == 2) {
+                                strncpy(temp_config.lora_gw_ip, input_buffer, sizeof(temp_config.lora_gw_ip) - 1);
+                                printf("\n[+] Entrada recebida!\n");
+
+                             // Submenu ---> Senha
+                            } else if (submenu_atual == 3) {
+                                strncpy(temp_config.password, input_buffer, sizeof(temp_config.password) - 1);
+                                printf("\n[+] Entrada recebida!\n");
+                            
+                             // Submenu ---> Data e Hora (conversão para Epoch)
+                            } else if (submenu_atual == 4) {
+                                int ano, mes, dia, hora, min;
+                                if (sscanf(input_buffer, "%d-%d-%d %d:%d", &ano, &mes, &dia, &hora, &min) == 5) {
+                                    struct tm data_atual = {0};
+                                    data_atual.tm_year = ano - 1900; 
+                                    data_atual.tm_mon = mes - 1;    
+                                    data_atual.tm_mday = dia;
+                                    data_atual.tm_hour = hora;
+                                    data_atual.tm_min = min;
+                                    data_atual.tm_sec = 0;
+                                    data_atual.tm_isdst = -1;         
+                                    
+                                    // Conversão para Epoch usando a biblioteca time
+                                    time_t epoch = mktime(&data_atual);
+                                    
+                                    // Ajuste do relógio interno
+                                    if (epoch != -1) {
+                                        temp_config.setup_date = (uint32_t)epoch;
+                                        struct timeval now = { .tv_sec = epoch, .tv_usec = 0 };
+                                        settimeofday(&now, NULL);
+                                        printf("\n \n[+] Epoch gerado (%lu) e relogio sincronizado.\n", temp_config.setup_date);
+                                    } else {
+                                        printf("\n \n[!] Erro na conversao da data.\n");
+                                    }
+                                } else {
+                                    printf("\n \n[!] Formato invalido. A operacao foi cancelada.\n");
+                                }
+                            }
+
+                        // Tratativa de entrada inválida
+                        } else {
+                            printf("\n \n[!] Operacao cancelada (entrada vazia).\n");
+                        }
+
+                        // Retorno ao menu princiapl
+                        submenu_atual = -1;
+                        estado_atual = STATE_MAIN_MENU;
+                    }
+
+                    // Retorno do carro para a posição inicial
+                    input_pos = 0; 
+                }
+                
+                // Registro do input
+                else if (input_pos < BUF_SIZE - 1) {
+                    input_buffer[input_pos++] = c;
+                    putchar(c); 
+                    fflush(stdout);
+                }
+            }
+        }
+        
+        // Passa o controle momentâneo para o RTOS evitar disparo do Watchdog
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+    
+    return ESP_OK;
+}

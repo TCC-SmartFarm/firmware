@@ -249,11 +249,19 @@ armazenar o arquivo de headers <nome>.h usar:
     - Correção da Chamada de horário do RTC interno (atualiza só no momento que o esp é ligado a primeira vez)
     - Calibragem dos sensores!
     - Tratar o caso do SD estar cheio -> descartar o resgistro mais antigo para poder gravar o novo
+    - Ajuste para comunicação com o GW Lora ---> device_config/device_config.h e cli_controller/serial_cli.c
 
 
+* Implementação e teste das funções para interação com o NVS do ESP32 ---> Teste OK!
 
+* Inicio da construção da interface via linha de comando para configuração:
+    - Menu principal com opções numeradas para cada parâmetro
+    - Opções adicionais "Verificar configuracoes existentes" e "Salvar e Sair"
+    - Submenu para cada parametro individual
+    - Armazenamento em memoria volatil até "Salvar e Sair"
 
-
+* Ajuste do relógio interno sendo feito no menu! 
+    - serial_controller/serial_cli.c ---> Linha 199
 =============================================================== /0/2026 ===============================================================
 
 
