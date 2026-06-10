@@ -171,7 +171,6 @@ static void execute_user_setup_cycle(void) {
     ESP_LOGI(TAG, "\n========== Iniciando Ciclo de Configuracao ==========\n");
     ESP_LOGI(TAG, "Inicializando interface UART para teste de presenca...");
     
-    // Utilize serial_cli_init se renomeou o include, ou uart_cli_init
     if (uart_cli_init() == ESP_OK) { 
         ESP_LOGI(TAG, "Aguardando 5 segundos por atividade na porta Serial...");
         
@@ -179,11 +178,10 @@ static void execute_user_setup_cycle(void) {
 
         if (serial_active) {
             ESP_LOGI(TAG, "Atividade detetada. Abrindo Menu de Configuracao.");
-            uart_cli_run_menu(); // Bloqueante até ao esp_restart()
+            uart_cli_run_menu(); 
         } else {
             ESP_LOGW(TAG, "Timeout atingido sem atividade serial.");
             ESP_LOGI(TAG, "[Simulacao] Iniciando Portal Wi-Fi AP... (Pulado para teste)");
-            // wifi_portal_start();
         }
     } else {
         ESP_LOGE(TAG, "Erro ao inicializar o driver UART.");
@@ -244,20 +242,59 @@ static sensor_data_t execute_reading_cycle(void) {
     ESP_LOGI(TAG, "Aguardando estabilização dos sensores (2 segundos)...");
     vTaskDelay(pdMS_TO_TICKS(2000));
 
-    // Leitura
-    ESP_LOGI(TAG, "Coletando amostras...");
-    ret_air = air_sensor_read(&data.air_temp, &data.air_hum);
-    ret_soil = soil_sensor_read_ads1115(&data.soil_hum);
-    ret_ldr = light_sensor_read(&data.light_perc);
+    // Leitura do DHT22 
+    float air_temp_val = 0, air_hum_val = 0;
+    ret_air = air_sensor_read(&air_temp_val, &air_hum_val);
+    if (ret_air != ESP_OK) {
+        ESP_LOGE(TAG, "Falha na leitura do DHT22.");
+    }
 
-    // Validação
-    if (ret_air == ESP_OK && ret_soil == ESP_OK && ret_ldr == ESP_OK) {
-        data.is_valid = true; // Indicativo de uma leitura bem sucedida
-        ESP_LOGI(TAG, "Ciclo concluído com sucesso!");
-        ESP_LOGI(TAG, "Timestamp - %i | Valores -> Ar: %.1fC / %.1f%% | Solo: %.1f%% | Luz: %.1f%%", 
-                 data.timestamp, data.air_temp, data.air_hum, data.soil_hum, data.light_perc);
+    // Acumuladores para as leituras analógicas
+    float acc_soil_hum = 0;
+    float acc_light_perc = 0;
+    int valid_soil_samples = 0;
+    int valid_ldr_samples = 0;
+
+    ESP_LOGI(TAG, "Coletando amostras dos sensores analógicos...");
+    for (int i = 0; i < NUM_LEITURAS; i++) {
+        float sample_soil = 0;
+        float sample_light = 0;
+
+        if (soil_sensor_read_ads1115(&sample_soil) == ESP_OK) {
+            acc_soil_hum += sample_soil;
+            valid_soil_samples++;
+        }
+
+        if (light_sensor_read(&sample_light) == ESP_OK) {
+            acc_light_perc += sample_light;
+            valid_ldr_samples++;
+        }
+
+        // Pequeno atraso para o ADC processar a próxima conversão e filtrar ruído AC
+        if (i < NUM_LEITURAS - 1) {
+            vTaskDelay(pdMS_TO_TICKS(ADC_SAMPLE_DELAY_MS));
+        }
+    }
+
+    // Validação e calculo das médias
+    if (ret_air == ESP_OK && valid_soil_samples > 0 && valid_ldr_samples > 0) {
+        
+        data.air_temp = air_temp_val;
+        data.air_hum = air_hum_val;
+        
+        // Cálculo da média aritmética
+        data.soil_hum = acc_soil_hum / valid_soil_samples;
+        data.light_perc = acc_light_perc / valid_ldr_samples;
+        
+        data.is_valid = true; 
+
+        ESP_LOGI(TAG, "Ciclo concluido com sucesso! (Medias calculadas com base em %d/%d amostras)", 
+                 valid_soil_samples, NUM_LEITURAS);
+                 
+        ESP_LOGI(TAG, "Timestamp - %lld | Valores -> Ar: %.1fC / %.1f%% | Solo: %.1f%% | Luz: %.1f%%", 
+                 (long long)data.timestamp, data.air_temp, data.air_hum, data.soil_hum, data.light_perc);
     } else {
-        ESP_LOGE(TAG, "Falha de comunicação em um ou mais sensores durante a leitura."); // is_valid = false
+        ESP_LOGE(TAG, "Falha critica: Amostras insuficientes para gerar a media dos sensores.");
     }
 
     return data;
