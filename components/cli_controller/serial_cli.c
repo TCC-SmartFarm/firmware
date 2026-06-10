@@ -44,6 +44,7 @@ static void print_main_menu(void) {
     printf("[2] IP do Gateway LoRa  : %s\n", temp_config.lora_gw_ip[0] ? temp_config.lora_gw_ip : "(vazio)");
     printf("[3] Senha               : %s\n", temp_config.password[0] ? temp_config.password : "(vazio)");
     printf("[4] Data e Hora Atual   : %lu\n",temp_config.setup_date);
+    printf("[5] Apagar Configuracoes da Memoria (Reset NVS)\n");
     printf("[8] Ver Configuracoes Atuais \n");
     printf("[9] Salvar e Sair\n");
     printf("==================================\n");
@@ -70,10 +71,9 @@ static void print_current_flash_config(void) {
     }
 }
 
-// Função principal
-esp_err_t cli_config_start(void) {
-    
-    // Configuração da comunicação serial
+// Configuração da interface UART
+esp_err_t uart_cli_init(void) {
+
     uart_config_t uart_config = {
         .baud_rate = 115200,
         .data_bits = UART_DATA_8_BITS,
@@ -81,18 +81,36 @@ esp_err_t cli_config_start(void) {
         .stop_bits = UART_STOP_BITS_1,
         .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
         .source_clk = UART_SCLK_DEFAULT,
-    };
+    }; // Parâmetros de configuração
     
-    // Instalação dos drivers e verificação
-    ESP_ERROR_CHECK(uart_driver_install(EX_UART_NUM, BUF_SIZE * 2, 0, 0, NULL, 0));
-    ESP_ERROR_CHECK(uart_param_config(EX_UART_NUM, &uart_config));
-    ESP_ERROR_CHECK(uart_set_pin(EX_UART_NUM, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+    esp_err_t ret = uart_driver_install(EX_UART_NUM, BUF_SIZE * 2, 0, 0, NULL, 0);
+    if (ret != ESP_OK){
+        return ret;
+    } // Instalação do Driver
 
+    ret = uart_param_config(EX_UART_NUM, &uart_config);
+    if (ret != ESP_OK){
+        return ret;
+    } // Configuração da interface
+
+    return uart_set_pin(EX_UART_NUM, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+}
+
+// Timeout para esperar o usuário
+bool uart_cli_wait_for_user(uint32_t timeout_ms) {
+
+    uint8_t dummy_buf[1];
+    // Aguarda um único byte até o limite do timeout informado
+    int len = uart_read_bytes(EX_UART_NUM, dummy_buf, 1, pdMS_TO_TICKS(timeout_ms));
+    return (len > 0);
+}
+
+void uart_cli_run_menu(void) {
     // Pré configurações
     uint8_t data[BUF_SIZE];
     char input_buffer[BUF_SIZE];
     int input_pos = 0;
-    
+
     // Carregamento da configuração prévia
     device_config_load(&temp_config);
 
@@ -138,6 +156,21 @@ esp_err_t cli_config_start(void) {
                                     printf("\n \n> Insira o novo valor (Enter para confirmar): ");
                                 }
                                 fflush(stdout); // Flush od buffer para exibição imediata dos submenus
+
+                            // Limpeza da memória
+                            } else if (option == 5) {
+                                printf("\n[!] Apagando configuracoes do NVS e limpando a Flash...\n");
+                                fflush(stdout);
+                                
+                                // Executa o reset lógico e físico do namespace
+                                if (device_config_reset() == ESP_OK) {
+                                    printf("Sucesso. O dispositivo sera reiniciado no modo de fabrica.\n");
+                                } else {
+                                    printf("Erro ao limpar a particao NVS.\n");
+                                }
+                                fflush(stdout);
+                                vTaskDelay(pdMS_TO_TICKS(1000));
+                                esp_restart(); // Reinicia para forçar o fluxo de configuração no próximo boot
 
                             // Exibição das configurações pré-existentes    
                             } else if (option == 8) {
@@ -237,6 +270,5 @@ esp_err_t cli_config_start(void) {
         // Passa o controle momentâneo para o RTOS evitar disparo do Watchdog
         vTaskDelay(pdMS_TO_TICKS(10));
     }
-    
-    return ESP_OK;
+
 }

@@ -27,7 +27,7 @@ static const char *TAG = "main";
 /* ------------------------------ Pinagens e Constantes --------------------------------------*/
 
 // DeepSleep
-#define SLEEP_DURATION_MIN          1 // Tempo que o módul deverá passar em deepsleep em minutos
+#define SLEEP_DURATION_MIN          0.2 // Tempo que o módulo deverá passar em deepsleep em minutos
 
 // Botão de Menu
 #define PIN_NUM_SETUP_BUTTON        33 
@@ -77,6 +77,11 @@ typedef struct {
 /* ------------------------------ Protótipos - Funções de Orquestração --------------------------------------*/
 
 /**
+ * @brief Executa o ciclo de configuração via serial ou wifi.
+ */
+static void execute_user_setup_cycle(void);
+
+/**
  * @brief Inicializa a infraestrutura de barramentos (SPI e I2C) do sistema.
  * @return esp_err_t ESP_OK se todos os barramentos foram inicializados com sucesso.
  * Retorna o código de erro específico caso algum barramento falhe.
@@ -107,48 +112,83 @@ static void test_nvs_storage(void);
 
 void app_main(void) {
 
-    ESP_LOGI(TAG, "\n========== Inicializado! ============\n");
+vTaskDelay(pdMS_TO_TICKS(500));
+    
+    ESP_LOGI(TAG, "\n========== Iniciando! ==========\n");
 
-   // 1. Inicializa o subsistema NVS
+    // 1. Recursos Críticos
     if (device_config_init() != ESP_OK) {
-        ESP_LOGE(TAG, "Falha critica ao inicializar NVS. Travando o sistema.");
+        ESP_LOGE(TAG, "Falha critica no NVS. Travando dispositivo.");
         while(1) { vTaskDelay(pdMS_TO_TICKS(1000)); }
     }
 
-    // 2. Carrega as configurações para verificar o estado
     user_config_t config = {0};
     device_config_load(&config);
 
-    // 3. Lógica de Roteamento
-    if (!config.is_configured) {
-        ESP_LOGI(TAG, "Dispositivo nao configurado. Chamando o Menu Serial...");
-        
-        if (cli_config_start() == ESP_OK) {
-            ESP_LOGI(TAG, "Tarefa CLI criada com sucesso. Aguardando interacao...");
-            // A função app_main encerra aqui, mas o FreeRTOS mantém a uart_cli_task rodando em background.
-        } else {
-            ESP_LOGE(TAG, "Falha ao iniciar o controlador UART.");
-        }
-    } else {
-        ESP_LOGI(TAG, "Dispositivo ja configurado! Iniciando ciclo operacional...");
-        
-        // Imprime os dados recuperados para confirmar o sucesso do setup
-        ESP_LOGI(TAG, "--- DADOS ATUAIS ---");
-        ESP_LOGI(TAG, "Nome : %s", config.device_name);
-        ESP_LOGI(TAG, "IP   : %s", config.lora_gw_ip);
-        ESP_LOGI(TAG, "Epoch: %lu", config.setup_date);
-        ESP_LOGI(TAG, "--------------------");
+    // 2. Avaliação de Estado
+    esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
+    bool force_configuration = false;
 
-        ESP_LOGW(TAG, "Apagando a memoria para o proximo teste...");
-        device_config_reset();
+    if (cause == ESP_SLEEP_WAKEUP_EXT0 || !config.is_configured) {
+        ESP_LOGI(TAG, "Condicao de configuracao detectada (Botao pressionado ou Sem Config).");
+        force_configuration = true;
     }
 
+    // 3. Roteamento
+    if (force_configuration) {
+        execute_user_setup_cycle();
+    } else {
+        // 1. Inicializa os barramentos físicos
+        if (system_bus_init() != ESP_OK) {
+            ESP_LOGE(TAG, "Falha na inicializacao do hardware. Abortando ciclo.");
+            return;
+        }
+
+        // 2. Executa a leitura em todos os sensores
+        sensor_data_t current_data = execute_reading_cycle();
+
+        // 3. Armazena no Cartão SD se os dados forem válidos
+        if (current_data.is_valid) {
+            save_to_sd_card(&current_data);
+        } else {
+            ESP_LOGW(TAG, "Leituras invalidas detectadas. Omitindo gravacao no SD para nao poluir o log.");
+        }
+    }
 
     ESP_LOGI(TAG, "\n========== Fim do teste! ============\n");
+
+    // 4. Encerramento
+    prepare_deep_sleep_and_shutdown();
+
+
+
 }
 
 
 /* ------------------------------ Funções de Orquestração --------------------------------------*/
+
+static void execute_user_setup_cycle(void) {
+    ESP_LOGI(TAG, "\n========== Iniciando Ciclo de Configuracao ==========\n");
+    ESP_LOGI(TAG, "Inicializando interface UART para teste de presenca...");
+    
+    // Utilize serial_cli_init se renomeou o include, ou uart_cli_init
+    if (uart_cli_init() == ESP_OK) { 
+        ESP_LOGI(TAG, "Aguardando 5 segundos por atividade na porta Serial...");
+        
+        bool serial_active = uart_cli_wait_for_user(5000); 
+
+        if (serial_active) {
+            ESP_LOGI(TAG, "Atividade detetada. Abrindo Menu de Configuracao.");
+            uart_cli_run_menu(); // Bloqueante até ao esp_restart()
+        } else {
+            ESP_LOGW(TAG, "Timeout atingido sem atividade serial.");
+            ESP_LOGI(TAG, "[Simulacao] Iniciando Portal Wi-Fi AP... (Pulado para teste)");
+            // wifi_portal_start();
+        }
+    } else {
+        ESP_LOGE(TAG, "Erro ao inicializar o driver UART.");
+    }
+}
 
 static esp_err_t system_bus_init(void) {
 
@@ -273,7 +313,7 @@ static void prepare_deep_sleep_and_shutdown(void) {
     ESP_LOGI(TAG, "Despertador configurado para %i minutos.", SLEEP_DURATION_MIN);
 
     // Definindo a fonte externa de Wake-Up (Botão ---> Menu de configuração)
-    //esp_sleep_enable_ext0_wakeup(PIN_NUM_SETUP_BUTTON, 1); 
+    esp_sleep_enable_ext0_wakeup(PIN_NUM_SETUP_BUTTON, 1); 
 
 
     ESP_LOGI(TAG, "Dromindo...");
@@ -285,66 +325,7 @@ static void prepare_deep_sleep_and_shutdown(void) {
     esp_deep_sleep_start();
 }
 
-static void test_nvs_storage(void) {
-    ESP_LOGI(TAG, "\n====== INICIANDO TESTE DO NVS ======\n");
-
-    //Inicialização
-    if (device_config_init() != ESP_OK) {
-        ESP_LOGE(TAG, "Falha crítica ao inicializar o NVS.");
-        return;
-    }
-
-    // Mock do struct
-    user_config_t dummy_config = {0};
-    strncpy(dummy_config.device_name, "Sensor_Estufa_01", sizeof(dummy_config.device_name) - 1);
-    strncpy(dummy_config.lora_gw_ip, "192.168.1.100", sizeof(dummy_config.lora_gw_ip) - 1);
-    strncpy(dummy_config.password, "senha_super_segura", sizeof(dummy_config.password) - 1);
-    dummy_config.setup_date = 1713190000;
-    dummy_config.is_configured = true;
-
-    ESP_LOGI(TAG, "Salvando configurações fictícias na memória Flash...");
-    if (device_config_save(&dummy_config) != ESP_OK) {
-        ESP_LOGE(TAG, "Falha ao salvar no NVS.");
-    }
-
-
-    // Struct vazia para receber as configurações da memória flash
-    user_config_t read_config = {0};
-
-    // Recuperação dos dados
-    ESP_LOGI(TAG, "Lendo configurações da memória Flash...");
-    if (device_config_load(&read_config) == ESP_OK) {
-        ESP_LOGI(TAG, "--- DADOS RECUPERADOS COM SUCESSO ---");
-        ESP_LOGI(TAG, "Nome do Device : %s", read_config.device_name);
-        ESP_LOGI(TAG, "IP do Gateway  : %s", read_config.lora_gw_ip);
-        ESP_LOGI(TAG, "Senha          : %s", read_config.password);
-        ESP_LOGI(TAG, "Epoch          : %lu", read_config.setup_date);
-        ESP_LOGI(TAG, "Configurado    : %s", read_config.is_configured ? "SIM" : "NAO");
-        ESP_LOGI(TAG, "-------------------------------------");
-    } else {
-        ESP_LOGE(TAG, "Falha na leitura dos dados. Partição pode estar vazia ou corrompida.");
-    }
-
-    /*// Teste de Reset 
-     ESP_LOGI(TAG, "Apagando configurações...");
-     device_config_reset();
-     if (device_config_load(&read_config) != ESP_OK) {
-     ESP_LOGI(TAG, "Sucesso: Os dados foram apagados e já não existem no NVS.");
-     }
-     */
-
-    ESP_LOGI(TAG, "\n====== FIM DO TESTE DO NVS ======\n");
-}
-
-
-
-
-
-
-
-
-
-
+ 
 
 
 

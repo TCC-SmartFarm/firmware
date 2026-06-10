@@ -249,7 +249,7 @@ armazenar o arquivo de headers <nome>.h usar:
     - Correção da Chamada de horário do RTC interno (atualiza só no momento que o esp é ligado a primeira vez)
     - Calibragem dos sensores!
     - Tratar o caso do SD estar cheio -> descartar o resgistro mais antigo para poder gravar o novo
-    - Ajuste para comunicação com o GW Lora ---> device_config/device_config.h e cli_controller/serial_cli.c
+    - Ajuste de parâmetros para comunicação com o GW Lora ---> device_config/device_config.h e cli_controller/serial_cli.c
 
 
 * Implementação e teste das funções para interação com o NVS do ESP32 ---> Teste OK!
@@ -262,12 +262,26 @@ armazenar o arquivo de headers <nome>.h usar:
 
 * Ajuste do relógio interno sendo feito no menu! 
     - serial_controller/serial_cli.c ---> Linha 199
-=============================================================== /0/2026 ===============================================================
 
+* Configuração via serial ---> OK!
 
+* Partir para a configuração via endpoint HTTP
 
+=============================================================== 10/06/2026 ===============================================================
 
+----> To-Do's
+    - Correção do ciclo de leituras (realizar varias leituras e tirar a média)
+    - Correção da Chamada de horário do RTC interno (atualiza só no momento que o esp é ligado a primeira vez)
+    - Calibragem dos sensores!
+    - Tratar o caso do SD estar cheio -> descartar o resgistro mais antigo para poder gravar o novo
+    - Ajuste de parâmetros para comunicação com o GW Lora ---> device_config/device_config.h e cli_controller/serial_cli.c
 
+* Decisão entre menu CLI e WiFi:
+    - Ao apertar o botão, inicia a interface UART e espera X segundos para receber um caractere.
+    - Se recebr um caractere antes do tempo máximo, invoca o menu via CLI
+    - Se o timeout estourar ---> Menu WiFi
+
+* Os fios devem ser ligados ao botão em "X" -> Pernas do mesmo lado são curto-circuitadas!
 
 =============================================================== /0/2026 ===============================================================
 
