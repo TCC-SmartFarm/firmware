@@ -8,6 +8,9 @@ Arquivo contendo o loop principal de execução.
 #include <stdio.h>
 #include <time.h>
 #include <sys/time.h>
+#include <sys/stat.h>
+#include <dirent.h>
+#include <unistd.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
@@ -53,9 +56,15 @@ static const char *TAG = "main";
 #define ADS1115_CHANNEL_HIG         0       // Canal A0 -> Higrômetro
 #define ADS1115_CHANNEL_LDR         1       // Canal A1 -> LDR
 
+// Amostragem
+#define NUM_READINGS            5   // Número de amostras de sensores analógicos
+#define ADC_SAMPLE_DELAY_MS    20   // Delay entre as amostras
+
 // Cartão SD (SPI)
 #define PIN_NUM_SPI_CS_SD        5
 #define MOUNT_POINT              "/sdcard"  // Ponto de montagem
+#define MAX_FILE_SIZE_BYTES 1024  // ------------------------------------ TESTE: 1 KB para forçar a rotação rápida
+#define MAX_LOG_FILES       5     // ------------------------------------ TESTE: 5 arquivos no máximo
 
 // DHT
 #define PIN_NUM_SDA_DHT             13
@@ -106,7 +115,9 @@ static void save_to_sd_card(const sensor_data_t *data);
  */
 static void prepare_deep_sleep_and_shutdown(void);
 
-static void test_nvs_storage(void);
+/* ------------------------------ Protótipos - Funções Auxiliares --------------------------------------*/
+
+static void test_sd_storage_rotation(void);
 
 /* ------------------------------ Loop Principal - app_main()  --------------------------------------*/
 
@@ -144,15 +155,8 @@ vTaskDelay(pdMS_TO_TICKS(500));
             return;
         }
 
-        // 2. Executa a leitura em todos os sensores
-        sensor_data_t current_data = execute_reading_cycle();
-
-        // 3. Armazena no Cartão SD se os dados forem válidos
-        if (current_data.is_valid) {
-            save_to_sd_card(&current_data);
-        } else {
-            ESP_LOGW(TAG, "Leituras invalidas detectadas. Omitindo gravacao no SD para nao poluir o log.");
-        }
+        // Teste da rptação de arquivos no SD
+        test_sd_storage_rotation();
     }
 
     ESP_LOGI(TAG, "\n========== Fim do teste! ============\n");
@@ -256,7 +260,7 @@ static sensor_data_t execute_reading_cycle(void) {
     int valid_ldr_samples = 0;
 
     ESP_LOGI(TAG, "Coletando amostras dos sensores analógicos...");
-    for (int i = 0; i < NUM_LEITURAS; i++) {
+    for (int i = 0; i < NUM_READINGS; i++) {
         float sample_soil = 0;
         float sample_light = 0;
 
@@ -271,7 +275,7 @@ static sensor_data_t execute_reading_cycle(void) {
         }
 
         // Pequeno atraso para o ADC processar a próxima conversão e filtrar ruído AC
-        if (i < NUM_LEITURAS - 1) {
+        if (i < NUM_READINGS - 1) {
             vTaskDelay(pdMS_TO_TICKS(ADC_SAMPLE_DELAY_MS));
         }
     }
@@ -289,7 +293,7 @@ static sensor_data_t execute_reading_cycle(void) {
         data.is_valid = true; 
 
         ESP_LOGI(TAG, "Ciclo concluido com sucesso! (Medias calculadas com base em %d/%d amostras)", 
-                 valid_soil_samples, NUM_LEITURAS);
+                 valid_soil_samples, NUM_READINGS);
                  
         ESP_LOGI(TAG, "Timestamp - %lld | Valores -> Ar: %.1fC / %.1f%% | Solo: %.1f%% | Luz: %.1f%%", 
                  (long long)data.timestamp, data.air_temp, data.air_hum, data.soil_hum, data.light_perc);
@@ -300,40 +304,89 @@ static sensor_data_t execute_reading_cycle(void) {
     return data;
 }
 
-static void save_to_sd_card(const sensor_data_t *data){
+static void save_to_sd_card(const sensor_data_t *data) {
+    // Verifica se o dado é válido
+    if (!data->is_valid) return;
 
-    // Verificação de integridade
-    if (!data->is_valid) {
-        ESP_LOGW(TAG, "Dados de sensores inválidos. Gravação no SD abortada.");
-        return;
-    }
-
-    // Montagem do sistema de arquivo
-    ESP_LOGI(TAG, "Montando o cartão SD...");
+    // Configura o cartão SD
     if (sdcard_config(SPI_HOST_ID, PIN_NUM_SPI_CS_SD, MOUNT_POINT) != ESP_OK) {
-        ESP_LOGE(TAG, "Falha ao acoplar o cartão SD. Abortando armazenamento.");
         return;
     }
 
-    // Montagem da string a ser gravada
-    ESP_LOGI(TAG, "Formatando dados em CSV...");
-    char csv_buffer[128];
-    snprintf(csv_buffer, sizeof(csv_buffer), "%lld,%.2f,%.2f,%.2f,%.2f", 
-             (long long)data->timestamp, 
-             data->air_temp, 
-             data->air_hum, 
-             data->soil_hum, 
-             data->light_perc);
-
-
-    // Gravação da linha no arquivo
-    ESP_LOGI(TAG, "Gravando linha no arquivo...");
-    if (sdcard_write("/sdcard/readings.csv", csv_buffer) != ESP_OK) {
-        ESP_LOGE(TAG, "Falha na escrita dos dados.");
+    // Tenta acessar o sistema de arquivos
+    DIR *dir = opendir(MOUNT_POINT);
+    if (!dir) {
+        ESP_LOGE(TAG, "Falha ao abrir diretorio do SD.");
+        sdcard_unmount(MOUNT_POINT);
+        return;
     }
 
-    // Desmontagem do sistema de arquivo
-    ESP_LOGI(TAG, "Desmontando o cartão SD...");
+    // Variáveis para busca do log mais antigo
+    struct dirent *entry;
+    long long latest_timestamp = -1;
+    long long oldest_timestamp = -1;
+    char oldest_filename[64] = {0};
+    int file_count = 0;
+
+    // Busca para achar o log mais antigo
+    while ((entry = readdir(dir)) != NULL) {
+        if (strncmp(entry->d_name, "log_", 4) == 0) {
+            file_count++;
+            long long ts = 0;
+            if (sscanf(entry->d_name, "log_%lld.csv", &ts) == 1) {
+                if (ts > latest_timestamp) latest_timestamp = ts;
+                if (oldest_timestamp == -1 || ts < oldest_timestamp) {
+                    oldest_timestamp = ts;
+                    strncpy(oldest_filename, entry->d_name, sizeof(oldest_filename) - 1);
+                }
+            }
+        }
+    }
+    closedir(dir);
+
+    // Exlcusão caso o armazenamento esteja cheio
+    if (file_count >= MAX_LOG_FILES && oldest_timestamp != -1) {
+        char path_to_delete[128];
+        snprintf(path_to_delete, sizeof(path_to_delete), "%s/%s", MOUNT_POINT, oldest_filename);
+        ESP_LOGW(TAG, "Limite de arquivos atingido (%d). Apagando o mais antigo: %s", MAX_LOG_FILES, path_to_delete);
+        unlink(path_to_delete);
+    }
+
+    // Rotação de arquivos
+    bool create_new_file = false;
+    char current_file_path[128];
+    
+    if (latest_timestamp == -1) {
+        create_new_file = true; // Primeiro arquivo do cartão SD
+    } else {
+        snprintf(current_file_path, sizeof(current_file_path), "%s/log_%lld.csv", MOUNT_POINT, latest_timestamp);
+        struct stat st;
+        if (stat(current_file_path, &st) == 0) {
+            if (st.st_size >= MAX_FILE_SIZE_BYTES) {
+                create_new_file = true;
+                ESP_LOGI(TAG, "Arquivo atual atingiu o limite de tamanho. Rotacionando...");
+            }
+        }
+    }
+
+    // Atualiza o timestamp se precisar criar arquivo novo
+    if (create_new_file) {
+        latest_timestamp = (long long)data->timestamp;
+        snprintf(current_file_path, sizeof(current_file_path), "%s/log_%lld.csv", MOUNT_POINT, latest_timestamp);
+    }
+
+    // Gravação da leitura
+    char csv_buffer[128];
+    snprintf(csv_buffer, sizeof(csv_buffer), "%lld,%.2f,%.2f,%.2f,%.2f\n", 
+             (long long)data->timestamp, data->air_temp, data->air_hum, data->soil_hum, data->light_perc);
+
+    if (sdcard_write(current_file_path, csv_buffer) != ESP_OK) {
+        ESP_LOGE(TAG, "Erro ao gravar no arquivo %s", current_file_path);
+    } else {
+        ESP_LOGI(TAG, "Dados gravados em: %s", current_file_path);
+    }
+
+    // Desmontagem do sistema de arquivos
     sdcard_unmount(MOUNT_POINT);
 }
 
@@ -362,10 +415,31 @@ static void prepare_deep_sleep_and_shutdown(void) {
     esp_deep_sleep_start();
 }
 
- 
+/* --------------------------------- Funções Auxiliares ----------------------------------------*/
 
 
+static void test_sd_storage_rotation(void) {
+    ESP_LOGI(TAG, "\n========== INICIANDO TESTE DE STRESS NO SD ==========\n");
+    
+    sensor_data_t mock_data = {
+        .air_temp = 25.5,
+        .air_hum = 60.0,
+        .soil_hum = 45.0,
+        .light_perc = 80.0,
+        .is_valid = true
+    };
 
+    time_t base_time = 1713190000; 
+
+    // Simulação
+    for (int i = 0; i < 150; i++) {
+        mock_data.timestamp = base_time + (i * 60); 
+        save_to_sd_card(&mock_data);
+        vTaskDelay(pdMS_TO_TICKS(10)); 
+    }
+
+    ESP_LOGI(TAG, "\n========== TESTE CONCLUIDO ==========\n");
+}
 
 
 

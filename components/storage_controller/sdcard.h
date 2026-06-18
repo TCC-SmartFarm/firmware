@@ -58,4 +58,10 @@ esp_err_t sdcard_unmount(const char* mount_point);
  */
 esp_err_t sdcard_debug_lifecycle(spi_host_device_t host_id, int cs_pin);
 
+/**
+ * @brief Calcula o espaço livre disponível no cartão SD.
+ * @return uint64_t Espaço livre em Kilobytes (KB). Retorna 0 em caso de falha.
+ */
+uint64_t sdcard_get_free_space_kb(void);
+
 #endif 

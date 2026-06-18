@@ -7,9 +7,14 @@ a partir da funções providas pelo driver.
 #include "sdcard.h"
 #include "esp_vfs_fat.h"
 #include "sdmmc_cmd.h"
+#include "ff.h"
 #include "driver/sdspi_host.h"
 #include "esp_log.h"
+#include <errno.h>
 #include <stdio.h>
+#include <dirent.h>
+#include <unistd.h>
+#include <string.h>
 
 // Definição de constantes
 static const char *TAG = "sdcard";
@@ -66,7 +71,7 @@ esp_err_t sdcard_write(const char* file_path, const char* data) {
     // Abertura do arquivo
     FILE* f = fopen(file_path, "a");
     if (f == NULL) {
-        ESP_LOGE(TAG, "Falha ao abrir o arquivo %s para escrita.", file_path);
+        ESP_LOGE(TAG, "Falha ao abrir o arquivo %s para escrita., Erro: %s (%d)", file_path, strerror(errno), errno);
         return ESP_FAIL;
     }
 
@@ -74,7 +79,7 @@ esp_err_t sdcard_write(const char* file_path, const char* data) {
     int res = fprintf(f, "%s\n", data);
     
     if (res < 0) {
-        ESP_LOGE(TAG, "Falha ao escrever os dados no arquivo %s.", file_path);
+        ESP_LOGE(TAG, "Falha ao escrever os dados no arquivo %s., Erro: %s (%d)", file_path, strerror(errno), errno);
         fclose(f);
         return ESP_FAIL;
     }
@@ -133,34 +138,25 @@ esp_err_t sdcard_unmount(const char* mount_point) {
     return ESP_OK;
 }
 
-esp_err_t sdcard_debug_lifecycle(spi_host_device_t host_id, int cs_pin) {
+uint64_t sdcard_get_free_space_kb(void) {
+
+    FATFS *fs;
+    DWORD fre_clust, fre_sect;
+
     
-    const char* mount_point = "/sdcard";
-    const char* test_file = "/sdcard/teste.txt";
-    const char* test_data = "Teste de gravacao: sensor_dummy=25.5";
-    esp_err_t ret;
-
-    ESP_LOGI(TAG, "\n====== Inciando teste do cartão SD ======\n");
-
-    ret = sdcard_config(host_id, cs_pin, mount_point);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Teste falhou na etapa de configuração.");
-        return ret;
+    FRESULT res = f_getfree("0:", &fre_clust, &fs);
+    if (res != FR_OK) {
+        ESP_LOGE("sdcard", "Falha ao obter espaco livre do SD (Erro FATFS: %d)", res);
+        return 0;
     }
 
-    ret = sdcard_write(test_file, test_data);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Teste falhou na etapa de escrita.");
-        sdcard_unmount(mount_point);
-        return ret;
-    }
-
-    ret = sdcard_unmount(mount_point);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Teste falhou na etapa de desmontagem.");
-        return ret;
-    }
-
-    ESP_LOGI(TAG, "--- TESTE DE CICLO DE VIDA CONCLUÍDO COM SUCESSO ---");
-    return ESP_OK;
+    // Determinando o total de setores livres
+    fre_sect = fre_clust * fs->csize;
+    
+    // Convertendo para Kb
+    uint64_t free_space_kb = ((uint64_t)fre_sect * 512) / 1024;
+    
+    return free_space_kb;
 }
+
+
