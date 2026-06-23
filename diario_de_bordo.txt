@@ -320,36 +320,40 @@ armazenar o arquivo de headers <nome>.h usar:
 
 =============================================================== 18/06/2026 ===============================================================
 
+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ REPORT - PRÉ BANCA -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
++
+-  * Utilização de outra forma de transmissão de dados para contornar o alto custo do gateway
++      - Modem GPRS + Chip celular ---> SIM800L
+-      - Biblioteca?
++
+-  * Não precisa de menu de configuração para parâmetros de conexão?
++      - LoRa -> Apenas DEV_EUI serve?
+-
++  * Dificuldades para implantação em campo
+-     - Invólucro -> Umidade e Formigas podem afetar o funcionamento da estação de coletad -> Usar caixas homologadas
++      - Alimentação -> Bateria 18650 (3.7/4.2V | 9800mAh) + Painel solar + Regulador de tensão (Step-Up: MT3608 | Step-Down: AP2112K)
+-          - Chip CN3065 p/ regular a carga da bateria via painel solar
++          - Usar capacitores de bypass para suavizar a curva durante a alimentação dos sensores analógicos
+-
++    
+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
 ----> To-Do's
     - Calibragem dos sensores!
-    - Tratar o caso do SD estar cheio -> descartar o resgistro mais antigo para poder gravar o novo
+    - Tratar o caso do SD estar cheio -> descartar o resgistro mais antigo para poder gravar o novo ---> Corrigido!
     - Ajuste de parâmetros para comunicação com o GW Lora ---> device_config/device_config.h e cli_controller/serial_cli.c
         - Realmente necessário...?
     - Verificação do timestamp em caso de perda de energia. Verificar Tempo atual x Tempo no NVS
 
--+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ REPORT - PRÉ BANCA -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-* Utilização de outra forma de transmissão de dados para contornar o alto custo do gateway
-    - Modem GPRS + Chip celular ---> SIM800L
-    - Biblioteca?
-
-* Não precisa de menu de configuração para parâmetros de conexão?
-    - LoRa -> Apenas DEV_EUI serve?
-
-* Dificuldades para implantação em campo
-    - Invólucro -> Umidade e Formigas podem afetar o funcionamento da estação de coletad -> Usar caixas homologadas
-    - Alimentação -> Bateria 18650 (3.7/4.2V | 9800mAh) + Painel solar + Regulador de tensão (Step-Up: MT3608 | Step-Down: AP2112K)
-        - Chip CN3065 p/ regular a carga da bateria via painel solar
-        - Usar capacitores de bypass para suavizar a curva durante a alimentação dos sensores analógicos
-    
--+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 * Troca de configuração na ESP-IDF para viabilizar os logs:
     - Habilitação de nomes longos de arquivos
     - Component config -> FAT Filesystem support -> Long filename support -> Long filename support in heap
 
-* Função de rotação dos arquivos de log -> OK!
-
+= To-Do OK = Tratar o caso do SD estar cheio -> descartar o resgistro mais antigo para poder gravar o novo ---> Corrigido!
+    - Definição de um tamanho máximo para cada arquivo e um número máximo de arquivos
+    - Cada arquivo tem o formato "log_TIMESTAMP.csv"
+    - Ao exceder o número máximo de arquivos, deleta o mais antigo com base no timestamp e cria um novo
 
     1 - Wake up ------------------ OK! 
     2 - Menu de configuração CLI - OK!
@@ -364,7 +368,11 @@ armazenar o arquivo de headers <nome>.h usar:
 
 =============================================================== /0/2026 ===============================================================
 
-
+----> To-Do's
+    - Calibragem dos sensores!
+    - Ajuste de parâmetros para comunicação com o GW Lora ---> device_config/device_config.h e cli_controller/serial_cli.c
+        - Realmente necessário...?
+    - Verificação do timestamp em caso de perda de energia. Verificar Tempo atual x Tempo no NVS
 
 
 

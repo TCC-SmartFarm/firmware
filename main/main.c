@@ -70,7 +70,9 @@ static const char *TAG = "main";
 #define PIN_NUM_SDA_DHT             13
 
 // Módulo Lora
-
+#define PIN_NUM_CS_LORA             26 // Chip select (NSS) -> LoRa
+#define PIN_NUM_RST_LORA            32 // Pino para resetar o módulo
+#define PIN_NUM_DIO1_LORA           27 // Pino para troca de dados
 
 // Struct para armazenar uma leitura
 typedef struct {
