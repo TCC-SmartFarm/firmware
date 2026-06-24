@@ -366,13 +366,20 @@ armazenar o arquivo de headers <nome>.h usar:
     7 - Tear Down ---------------- OK!
     8 - Deep Sleep --------------- OK!
 
-=============================================================== /0/2026 ===============================================================
+=============================================================== 24/06/2026 ===============================================================
 
 ----> To-Do's
     - Calibragem dos sensores!
     - Ajuste de parâmetros para comunicação com o GW Lora ---> device_config/device_config.h e cli_controller/serial_cli.c
         - Realmente necessário...?
     - Verificação do timestamp em caso de perda de energia. Verificar Tempo atual x Tempo no NVS
+    - Soldar pino DIO0 no módulo LoRa
+
+* Implementação da comunicação LoRa:
+    - Utilizar a interface SPI para se comunicar com o chp SX127xx
+    - Utilizar o componente jgromes/RadioLib para implementar o protocolo de comunicação LoraWAN (registro do device na rede, tx/rx, etc...)
+    - Componente escrito em C++ -> Criar um Wrapper para "Traduzir" as funcionalidades para C puro
+    
 
 
 
