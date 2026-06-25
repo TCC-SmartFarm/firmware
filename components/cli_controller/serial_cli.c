@@ -41,10 +41,12 @@ static void print_main_menu(void) {
     printf("        MENU DE CONFIGURACAO      \n");
     printf("-+H+-+H+-+H+-+H+-+H+-+H+-+H+-+H+-+H+-\n \n");
     printf("[1] Nome do Dispositivo : %s\n", temp_config.device_name[0] ? temp_config.device_name : "(vazio)");
-    printf("[2] IP do Gateway LoRa  : %s\n", temp_config.lora_gw_ip[0] ? temp_config.lora_gw_ip : "(vazio)");
-    printf("[3] Senha               : %s\n", temp_config.password[0] ? temp_config.password : "(vazio)");
-    printf("[4] Data e Hora Atual   : %lu\n",temp_config.setup_date);
-    printf("[5] Apagar Configuracoes da Memoria (Reset NVS)\n");
+    printf("[2] DevEUI              : %s\n", temp_config.dev_eui[0] ? temp_config.dev_eui : "(vazio)");
+    printf("[3] JoinEUI             : %s\n", temp_config.join_eui[0] ? temp_config.join_eui : "(vazio)");
+    printf("[4] AppKey              : %s\n", temp_config.app_key[0] ? temp_config.app_key : "(vazio)");
+    printf("[5] Senha               : %s\n", temp_config.password[0] ? temp_config.password : "(vazio)");
+    printf("[6] Data e Hora Atual   : %lu\n",temp_config.setup_date);
+    printf("[7] Apagar Configuracoes da Memoria (Reset NVS)\n");
     printf("[8] Ver Configuracoes Atuais \n");
     printf("[9] Salvar e Sair\n");
     printf("==================================\n");
@@ -62,9 +64,11 @@ static void print_current_flash_config(void) {
     if (device_config_load(&flash_cfg) == ESP_OK) {
         printf("\n-+H+- DADOS GRAVADOS NA MEMORIA -+H+-\n");
         printf("Nome do Dispositivo : %s\n", flash_cfg.device_name);
-        printf("IP do Gateway LoRa  : %s\n", flash_cfg.lora_gw_ip);
-        printf("Data e Hora         : %lu\n", flash_cfg.setup_date);
+        printf("DevEUI              : %s\n", flash_cfg.dev_eui);
+        printf("JoinEUI             : %s\n", flash_cfg.join_eui);
+        printf("AppKey              : %s\n", flash_cfg.app_key);
         printf("Senha               : %s\n", flash_cfg.password);
+        printf("Data e Hora         : %lu\n", flash_cfg.setup_date);
         printf("-+H+-+H+-+H+-+H+-+H+-+H+-+H+-+H+-+H+-\n");
     } else {
         printf("\n[!] Nenhuma configuracao previa encontrada na memoria.\n");
@@ -147,10 +151,10 @@ void uart_cli_run_menu(void) {
                             int option = input_buffer[0] - '0';
 
                             // Opções dos submenus
-                            if (option >= 1 && option <= 4) {
+                            if (option >= 1 && option <= 6) {
                                 submenu_atual = option;
                                 estado_atual = STATE_SUBMENU_INPUT;
-                                if (option == 4) {
+                                if (option == 6) {
                                     printf("\n \n> Insira a data e hora (AAAA-MM-DD HH:mm): ");
                                 } else {
                                     printf("\n \n> Insira o novo valor (Enter para confirmar): ");
@@ -158,7 +162,7 @@ void uart_cli_run_menu(void) {
                                 fflush(stdout); // Flush od buffer para exibição imediata dos submenus
 
                             // Limpeza da memória
-                            } else if (option == 5) {
+                            } else if (option == 7) {
                                 printf("\n[!] Apagando configuracoes do NVS e limpando a Flash...\n");
                                 fflush(stdout);
                                 
@@ -204,18 +208,28 @@ void uart_cli_run_menu(void) {
                                 strncpy(temp_config.device_name, input_buffer, sizeof(temp_config.device_name) - 1);
                                 printf("\n[+] Entrada recebida!\n");
 
-                             // Submenu ---> IP do Gateway LoRa
+                             // Submenu ---> DevEUI
                             } else if (submenu_atual == 2) {
-                                strncpy(temp_config.lora_gw_ip, input_buffer, sizeof(temp_config.lora_gw_ip) - 1);
+                                strncpy(temp_config.dev_eui, input_buffer, sizeof(temp_config.dev_eui) - 1);
+                                printf("\n[+] Entrada recebida!\n");
+
+                             // Submenu ---> JoinEUI
+                            } else if (submenu_atual == 3) {
+                                strncpy(temp_config.join_eui, input_buffer, sizeof(temp_config.join_eui) - 1);
+                                printf("\n[+] Entrada recebida!\n");
+
+                             // Submenu ---> AppKey
+                            } else if (submenu_atual == 4) {
+                                strncpy(temp_config.app_key, input_buffer, sizeof(temp_config.app_key) - 1);
                                 printf("\n[+] Entrada recebida!\n");
 
                              // Submenu ---> Senha
-                            } else if (submenu_atual == 3) {
+                            } else if (submenu_atual == 5) {
                                 strncpy(temp_config.password, input_buffer, sizeof(temp_config.password) - 1);
                                 printf("\n[+] Entrada recebida!\n");
                             
                              // Submenu ---> Data e Hora (conversão para Epoch)
-                            } else if (submenu_atual == 4) {
+                            } else if (submenu_atual == 6) {
                                 int ano, mes, dia, hora, min;
                                 if (sscanf(input_buffer, "%d-%d-%d %d:%d", &ano, &mes, &dia, &hora, &min) == 5) {
                                     struct tm data_atual = {0};

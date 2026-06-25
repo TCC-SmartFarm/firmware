@@ -18,10 +18,20 @@ Arquivo contendo os headers das funções implementadas no arquivo device_config
  */
 typedef struct __attribute__((packed)) {
     char device_name[32];
-    char lora_gw_ip[16];
     char password[64];
+
     uint32_t setup_date; 
     bool is_configured;  // Flag de controle
+
+    // Parametros LoRa - OTAA
+    char dev_eui[17];  // 16 caracteres hex + terminador nulo
+    char join_eui[17]; // 16 caracteres hex + terminador nulo
+    char app_key[33];  // 32 caracteres hex + terminador nulo
+
+    // Persistência de conexão
+    bool has_lora_session;
+    uint8_t lora_session[256];
+    
 } user_config_t; // Estrutura atômica
 
 /**

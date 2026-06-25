@@ -373,13 +373,57 @@ armazenar o arquivo de headers <nome>.h usar:
     - Ajuste de parâmetros para comunicação com o GW Lora ---> device_config/device_config.h e cli_controller/serial_cli.c
         - Realmente necessário...?
     - Verificação do timestamp em caso de perda de energia. Verificar Tempo atual x Tempo no NVS
-    - Soldar pino DIO0 no módulo LoRa
+    - Soldar pino DIO0 no módulo LoRa ---> feito
 
 * Implementação da comunicação LoRa:
     - Utilizar a interface SPI para se comunicar com o chp SX127xx
     - Utilizar o componente jgromes/RadioLib para implementar o protocolo de comunicação LoraWAN (registro do device na rede, tx/rx, etc...)
     - Componente escrito em C++ -> Criar um Wrapper para "Traduzir" as funcionalidades para C puro
     
+
+=============================================================== 25/06/2026 ===============================================================
+
+----> To-Do's
+    - Calibragem dos sensores!
+    - Ajuste de parâmetros para comunicação com o GW Lora ---> device_config/device_config.h e cli_controller/serial_cli.c
+        - Realmente necessário...?
+    - Verificação do timestamp em caso de perda de energia. Verificar Tempo atual x Tempo no NVS
+    - Comprar conversor de tensão Step-Up
+
+* controller para os módulos de transmissão ---> transmission_controler
+
+* Parâmetros para o OTAA (handshake entre device e gateway):
+    - DevEUI: deve ser gerado pelo operador da rede LoRa (TTN, ChirpStack)
+        - Apenas devices ATIVOS (inteligentes) que ja implementam o protocolo LoRaWAN nativamente conhecem o DevEUI previamente
+    - JoinEUI: deve ser gerado pelo operador da rede LoRa
+    - AppKey: deve ser gerado pelo operador da rede LoRa
+    - Devem ser guardados no NVS!
+
+* Alternativa ao OTAA ---> ABP:
+    - Device ja considera que está na rede, não precisa esperar o handshake do gateway
+    - Problema do Frame Counter: cada pacote enviado incrementa um contador registrado pelo gateway. Pacotes com Frame Counter repetidos
+    são descartados pelo Gateway. No entanto, pode-se desabilitar esta opção nas configurações avançadas do gateway.
+    - www.thethingsindustries.com/docs/hardware/devices/concepts/abp-vs-otaa/?_x_tr_sl&_x_tr_tl&_x_tr_hl
+
+* Deve-se realizar um join na rede apenas na PRIMEIRA conexão. Após isso, guardar os parâmetros acordados (RadioLib -> LoraWAN Session)
+e reutilizá-los em transmissões futuras.
+
+=============================================================== /0/2026 ===============================================================
+
+
+
+
+=============================================================== /0/2026 ===============================================================
+
+
+
+
+=============================================================== /0/2026 ===============================================================
+
+
+
+
+=============================================================== /0/2026 ===============================================================
 
 
 

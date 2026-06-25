@@ -54,7 +54,7 @@ dependencies:
       type: service
     version: 1.0.34
   espp/base_component:
-    component_hash: 695b1a9985af8b7ce74f0750b46e67d82fb7e5e847bcb6f82c29c7ca52b2e297
+    component_hash: 044472522a07bb4f03f50885ad0f3684d26254ef7cb0ea73f21d11241cfe4fdd
     dependencies:
     - name: espp/logger
       registry_url: https://components.espressif.com
@@ -66,9 +66,9 @@ dependencies:
     source:
       registry_url: https://components.espressif.com
       type: service
-    version: 1.0.34
+    version: 1.1.3
   espp/base_peripheral:
-    component_hash: 75ba52ffa349e18308e3068d07f429ea9137bde83d1c54f376fbde0faa8c79b4
+    component_hash: f1b5be84a6f1e3150d1b3d4a6ca5c81be0da06d3be391cc869b795ac4d5b7b92
     dependencies:
     - name: espp/base_component
       registry_url: https://components.espressif.com
@@ -80,9 +80,9 @@ dependencies:
     source:
       registry_url: https://components.espressif.com
       type: service
-    version: 1.0.34
+    version: 1.1.3
   espp/format:
-    component_hash: 0bcf9e24c5748d8de5c5368941baed281b4951f68a84f1f20a178535c4e2da4b
+    component_hash: 997bc557fbb73549999699407f27856ad3c3cd9207e2e5f4af523e8dfc9ae659
     dependencies:
     - name: idf
       require: private
@@ -90,9 +90,9 @@ dependencies:
     source:
       registry_url: https://components.espressif.com
       type: service
-    version: 1.0.34
+    version: 1.1.3
   espp/logger:
-    component_hash: 5ce7b81bbc402def13d580d9a9763b142118dd466903a3895d6dbcb1aa1cfb91
+    component_hash: 2a636c84d987a20b98cabbdcc65b92d9b6725d1c12cf2b3487d6ba60e452ef13
     dependencies:
     - name: espp/format
       registry_url: https://components.espressif.com
@@ -104,15 +104,26 @@ dependencies:
     source:
       registry_url: https://components.espressif.com
       type: service
-    version: 1.0.34
+    version: 1.1.3
   idf:
     source:
       type: idf
     version: 5.5.2
+  jgromes/radiolib:
+    component_hash: 024269f750d7eb181d07bd57ccec5e5e4e276dbb262d681a6501c8e2244e80f0
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=4.1'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 7.7.1
 direct_dependencies:
 - esp-idf-lib/dht
 - espp/ads1x15
 - idf
-manifest_hash: b21315c283e27cc1c38f76a555740477bf8bac79382ebe9fc47c18b6cbb417dc
+- jgromes/radiolib
+manifest_hash: f437d9e8a07aa94efac9fc72209ab6cf1f370947bd3b68ccf9c65bb4ade3f0f3
 target: esp32
 version: 2.0.0
