@@ -397,7 +397,7 @@ armazenar o arquivo de headers <nome>.h usar:
         - Apenas devices ATIVOS (inteligentes) que ja implementam o protocolo LoRaWAN nativamente conhecem o DevEUI previamente
     - JoinEUI: deve ser gerado pelo operador da rede LoRa
     - AppKey: deve ser gerado pelo operador da rede LoRa
-    - Devem ser guardados no NVS!
+    - Devem ser guardados na RAM RTC e com backup no NVS! (Evita gravações frequentes na memoria flash mas tem resilienca à falhas)
 
 * Alternativa ao OTAA ---> ABP:
     - Device ja considera que está na rede, não precisa esperar o handshake do gateway
@@ -405,13 +405,25 @@ armazenar o arquivo de headers <nome>.h usar:
     são descartados pelo Gateway. No entanto, pode-se desabilitar esta opção nas configurações avançadas do gateway.
     - www.thethingsindustries.com/docs/hardware/devices/concepts/abp-vs-otaa/?_x_tr_sl&_x_tr_tl&_x_tr_hl
 
+* Melhores práticas - The Things Network
+    - https://www.thethingsindustries.com/docs/hardware/devices/concepts/best-practices/
+
 * Deve-se realizar um join na rede apenas na PRIMEIRA conexão. Após isso, guardar os parâmetros acordados (RadioLib -> LoraWAN Session)
 e reutilizá-los em transmissões futuras.
 
-=============================================================== /0/2026 ===============================================================
+=============================================================== 26/06/2026 ===============================================================
 
+----> To-Do's
+    - Calibragem dos sensores!
+    - Ajuste de parâmetros para comunicação com o GW Lora ---> device_config/device_config.h e cli_controller/serial_cli.c
+        - Realmente necessário...?
+    - Verificação do timestamp em caso de perda de energia. Verificar Tempo atual x Tempo no NVS
+    - Comprar conversor de tensão Step-Up
 
+* Criação do componente payload_formatter, responsável por formatar as payloads para comunicçaão LoRa e Celular (MQTT)
 
+* Criação de um header próprio para guardar a struct de leituras do sensor -> sensor_controller/sensor_config.h
+    - Tanto a main quanto a payload_formatter precisam acessar estes dados
 
 =============================================================== /0/2026 ===============================================================
 

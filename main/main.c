@@ -6,6 +6,8 @@ Arquivo contendo o loop principal de execução.
 
 // Includes de sistema
 #include <stdio.h>
+#include <stdint.h>
+#include <stdbool.h>
 #include <time.h>
 #include <sys/time.h>
 #include <sys/stat.h>
@@ -15,6 +17,7 @@ Arquivo contendo o loop principal de execução.
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "esp_sleep.h"
+#include "esp_attr.h"
 
 // Includes dos componetes
 #include "bus.h"
@@ -22,6 +25,7 @@ Arquivo contendo o loop principal de execução.
 #include "air_sensor.h"
 #include "soil_sensor.h"
 #include "light_sensor.h"
+#include "sensor_data.h"
 #include "device_config.h"
 #include "serial_cli.h"
 
@@ -49,6 +53,11 @@ static const char *TAG = "main";
 #define PIN_NUM_SPI_CLK          18
 #define SPI_MAX_TRANSFER         4000
 
+// Memória RTC
+RTC_DATA_ATTR static bool rtc_lora_session_valid = false;                       // Verificador da existencia de uma sessão (p/ cold boot i.e)
+RTC_DATA_ATTR static uint8_t rtc_lora_session_buffer[LORAWAN_SESSION_BUF_SIZE]; // Buffer para estado de sessão lora
+RTC_DATA_ATTR static uint32_t rtc_uplink_counter = 0;                           // Contador para backup
+
 
 
 // Conversor AD externo - ADS1115 (I²C)
@@ -56,7 +65,7 @@ static const char *TAG = "main";
 #define ADS1115_CHANNEL_HIG         0       // Canal A0 -> Higrômetro
 #define ADS1115_CHANNEL_LDR         1       // Canal A1 -> LDR
 
-// Amostragem
+                                    // Amostragem
 #define NUM_READINGS            5   // Número de amostras de sensores analógicos
 #define ADC_SAMPLE_DELAY_MS    20   // Delay entre as amostras
 
@@ -70,21 +79,14 @@ static const char *TAG = "main";
 #define PIN_NUM_SDA_DHT             13
 
 // Módulo Lora
-#define PIN_NUM_CS_LORA             26 // Chip select (NSS) -> LoRa
-#define PIN_NUM_RST_LORA            25 // Pino para resetar o módulo
+#define PIN_NUM_CS_LORA             26      // Chip select (NSS) -> LoRa
+#define PIN_NUM_RST_LORA            25      // Pino para resetar o módulo
 #define PIN_NUM_DIO0_LORA           32 
-#define PIN_NUM_DIO1_LORA           27 // Pino para troca de dados
+#define PIN_NUM_DIO1_LORA           27      
+#define LORAWAN_SESSION_BUF_SIZE    256     // Tamanho do buffer (denifino em lorawan_config.h)
+#define NVS_BACKUP_INTERVAL         50      // Backup na Flash a cada 50 transmissões
 
-// Struct para armazenar uma leitura
-typedef struct {
-    time_t timestamp;     // Unix Epoch
-    float air_temp;       // Temperatura do Ar (°C)
-    float air_hum;        // Humidade do Ar (%)
-    float soil_hum;       // Humidade do Solo (%)
-    float light_perc;     // Nível de Luminosidade (%)
-    bool is_valid;        // Flag para indicar se as leituras contêm dados reais ou se falharam
-                          // true -> grava e transmite os dados | false -> Apenas transmite para avisar o estado de erro e não poluir o SD
-} sensor_data_t;
+
 
 /* ------------------------------ Protótipos - Funções de Orquestração --------------------------------------*/
 
