@@ -1,3 +1,5 @@
+
+#include "EspHal.h"
 #include "lorawan_config.h"
 #include "esp_log.h"
 #include <RadioLib.h>
@@ -17,15 +19,16 @@ extern "C" esp_err_t lorawan_hardware_init(const lorawan_hal_config_t *hal_conf)
     }
 
     if (!hal) {
-        // Acopla ao barramento SPI ja inicializado
-        hal = new EspHal((spi_host_device_t)hal_conf->spi_host_id);
+        // Acopla ao barramento SPI ja inicializado -> Parametro RADIOLIB_NC passado para evitar a re-configuração do barramento SPI
+        hal = new EspHal(RADIOLIB_NC, RADIOLIB_NC, RADIOLIB_NC, (spi_host_device_t)hal_conf->spi_host_id);
+        // Instancia um objeto "Module" com os pinos especificados
         mod = new Module(hal, hal_conf->nss_pin, hal_conf->dio0_pin, hal_conf->rst_pin, hal_conf->dio1_pin);
         radio = new SX1276(mod);
-        
         // Frequencia de operação (915MHz)
         node = new LoRaWANNode(radio, &AU915); 
     }
 
+    // Inicialização do módulo
     ESP_LOGI(TAG, "Inicializando transceptor SX1276 via SPI...");
     int16_t state = radio->begin();
     if (state != RADIOLIB_ERR_NONE) {
@@ -34,6 +37,13 @@ extern "C" esp_err_t lorawan_hardware_init(const lorawan_hal_config_t *hal_conf)
     }
     
     return ESP_OK;
+}
+
+extern "C" void lorawan_hardware_deinit(void) {
+    // Liberação dos recursos
+    if (mod) { delete mod; mod = nullptr; }
+    if (hal) { delete hal; hal = nullptr; }
+    ESP_LOGI(TAG, "Recursos de hardware do LoRaWAN liberados.");
 }
 
 extern "C" esp_err_t lorawan_join(const lorawan_keys_t *keys) {
@@ -50,50 +60,43 @@ extern "C" esp_err_t lorawan_join(const lorawan_keys_t *keys) {
         devEUI = (devEUI << 8) | keys->dev_eui[i];
     }
 
-    ESP_LOGI(TAG, "Iniciando processo de Join (OTAA)...");
-    
     // beginOTAA lida com o Request e aguarda o Accept na janela RX correta
-    int16_t state = node->beginOTAA(joinEUI, devEUI, (uint8_t*)keys->app_key, (uint8_t*)keys->app_key);
-    
-    if (state == RADIOLIB_ERR_NONE) {
-        ESP_LOGI(TAG, "Join OTAA aceite pela rede!");
-        return ESP_OK;
-    } else {
-        ESP_LOGE(TAG, "Falha no Join OTAA. Erro RadioLib: %d", state);
-        return ESP_FAIL;
-    }
+    ESP_LOGI(TAG, "Iniciando processo de Join (OTAA)...");
+    node->beginOTAA(joinEUI, devEUI, (uint8_t*)keys->app_key, (uint8_t*)keys->app_key);
+
+    ESP_LOGI(TAG, "Processo OTAA concluido!");
+    return ESP_OK;
 }
 
 extern "C" esp_err_t lorawan_save_session(uint8_t *session_buffer) {
     if (!node || !session_buffer) return ESP_ERR_INVALID_STATE;
 
-    // Salva as chaves de sessão para evitar um novo processo de Join
-    size_t len = node->saveSession(session_buffer, LORAWAN_SESSION_BUF_SIZE);
+    // Obtém os ponteiros dos buffers internos mantidos pelo RadioLib
+    uint8_t *nonces = node->getBufferNonces();
+    uint8_t *session = node->getBufferSession();
     
-    if (len > 0) {
-        ESP_LOGI(TAG, "Sessao MAC extraida com sucesso (%zu bytes).", len);
-        return ESP_OK;
-    } else {
-        ESP_LOGE(TAG, "Falha na extracao do estado da sessao.");
-        return ESP_FAIL;
-    }
+    // Copia os dados particionados para o buffer unificado do projeto
+    memcpy(session_buffer, nonces, RADIOLIB_LORAWAN_NONCES_BUF_SIZE);
+    memcpy(session_buffer + RADIOLIB_LORAWAN_NONCES_BUF_SIZE, session, RADIOLIB_LORAWAN_SESSION_BUF_SIZE);
+    
+    ESP_LOGI(TAG, "Sessao MAC extraida com sucesso.");
+    return ESP_OK;
 }
 
 extern "C" esp_err_t lorawan_restore_session(const uint8_t *session_buffer) {
     if (!node || !session_buffer) return ESP_ERR_INVALID_STATE;
 
-    ESP_LOGI(TAG, "Restaurando estado MAC LoRaWAN a partir do buffer...");
-    
     // Restaura os parâmetros salvos de sessão
-    int16_t state = node->restoreSession(session_buffer, LORAWAN_SESSION_BUF_SIZE);
+    ESP_LOGI(TAG, "Restaurando estado MAC LoRaWAN a partir do buffer...");
+    // Restaura injetando os dados de volta nos buffers internos
+    uint8_t *nonces = node->getBufferNonces();
+    uint8_t *session = node->getBufferSession();
     
-    if (state == RADIOLIB_ERR_NONE) {
-        ESP_LOGI(TAG, "Sessao MAC restaurada com sucesso.");
-        return ESP_OK;
-    } else {
-        ESP_LOGE(TAG, "Falha na restauracao da sessao. Erro RadioLib: %d", state);
-        return ESP_FAIL;
-    }
+    memcpy(nonces, session_buffer, RADIOLIB_LORAWAN_NONCES_BUF_SIZE);
+    memcpy(session, session_buffer + RADIOLIB_LORAWAN_NONCES_BUF_SIZE, RADIOLIB_LORAWAN_SESSION_BUF_SIZE);
+    
+    ESP_LOGI(TAG, "Sessao MAC restaurada com sucesso.");
+    return ESP_OK;
 }
 
 extern "C" esp_err_t lorawan_node_send(uint8_t f_port, const uint8_t *data, size_t length) {

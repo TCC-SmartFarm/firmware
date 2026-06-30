@@ -28,6 +28,8 @@ Arquivo contendo o loop principal de execução.
 #include "sensor_data.h"
 #include "device_config.h"
 #include "serial_cli.h"
+#include "lorawan_config.h"
+#include "payload_formatter.h"
 
 static const char *TAG = "main";
 
@@ -64,7 +66,6 @@ RTC_DATA_ATTR static uint32_t rtc_uplink_counter = 0;                           
 #define ADS1115_I2C_ADDRESS         0x48    // Endereço padrão (ADDR ligado em GND)
 #define ADS1115_CHANNEL_HIG         0       // Canal A0 -> Higrômetro
 #define ADS1115_CHANNEL_LDR         1       // Canal A1 -> LDR
-
                                     // Amostragem
 #define NUM_READINGS            5   // Número de amostras de sensores analógicos
 #define ADC_SAMPLE_DELAY_MS    20   // Delay entre as amostras
@@ -122,7 +123,6 @@ static void prepare_deep_sleep_and_shutdown(void);
 
 /* ------------------------------ Protótipos - Funções Auxiliares --------------------------------------*/
 
-static void test_sd_storage_rotation(void);
 
 /* ------------------------------ Loop Principal - app_main()  --------------------------------------*/
 
@@ -160,8 +160,6 @@ vTaskDelay(pdMS_TO_TICKS(500));
             return;
         }
 
-        // Teste da rptação de arquivos no SD
-        test_sd_storage_rotation();
     }
 
     ESP_LOGI(TAG, "\n========== Fim do teste! ============\n");
@@ -421,30 +419,6 @@ static void prepare_deep_sleep_and_shutdown(void) {
 }
 
 /* --------------------------------- Funções Auxiliares ----------------------------------------*/
-
-
-static void test_sd_storage_rotation(void) {
-    ESP_LOGI(TAG, "\n========== INICIANDO TESTE DE STRESS NO SD ==========\n");
-    
-    sensor_data_t mock_data = {
-        .air_temp = 25.5,
-        .air_hum = 60.0,
-        .soil_hum = 45.0,
-        .light_perc = 80.0,
-        .is_valid = true
-    };
-
-    time_t base_time = 1713190000; 
-
-    // Simulação
-    for (int i = 0; i < 150; i++) {
-        mock_data.timestamp = base_time + (i * 60); 
-        save_to_sd_card(&mock_data);
-        vTaskDelay(pdMS_TO_TICKS(10)); 
-    }
-
-    ESP_LOGI(TAG, "\n========== TESTE CONCLUIDO ==========\n");
-}
 
 
 

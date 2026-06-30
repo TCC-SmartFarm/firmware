@@ -211,16 +211,19 @@ void uart_cli_run_menu(void) {
                              // Submenu ---> DevEUI
                             } else if (submenu_atual == 2) {
                                 strncpy(temp_config.dev_eui, input_buffer, sizeof(temp_config.dev_eui) - 1);
+                                temp_config.dev_eui[sizeof(temp_config.dev_eui) - 1] = '\0';
                                 printf("\n[+] Entrada recebida!\n");
 
                              // Submenu ---> JoinEUI
                             } else if (submenu_atual == 3) {
                                 strncpy(temp_config.join_eui, input_buffer, sizeof(temp_config.join_eui) - 1);
+                                temp_config.join_eui[sizeof(temp_config.join_eui) - 1] = '\0';
                                 printf("\n[+] Entrada recebida!\n");
 
                              // Submenu ---> AppKey
                             } else if (submenu_atual == 4) {
                                 strncpy(temp_config.app_key, input_buffer, sizeof(temp_config.app_key) - 1);
+                                temp_config.app_key[sizeof(temp_config.app_key) - 1] = '\0';
                                 printf("\n[+] Entrada recebida!\n");
 
                              // Submenu ---> Senha

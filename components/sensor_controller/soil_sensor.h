@@ -13,7 +13,6 @@ Arquivo contendo os headers das funções implementadas no arquivo soil_sensor.c
 
 // Includes
 #include "esp_err.h"    
-#include "hal/adc_types.h"   
 #include "driver/i2c.h"
 
 

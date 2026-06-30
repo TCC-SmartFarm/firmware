@@ -16,4 +16,4 @@ dependencies:
   #   public: true
   esp-idf-lib/dht: '*'
   espp/ads1x15: '*'
-  jgromes/radiolib: "^7.7.1"
+  jgromes/radiolib: "==6.6.0"

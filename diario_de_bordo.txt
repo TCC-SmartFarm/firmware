@@ -425,9 +425,16 @@ e reutilizá-los em transmissões futuras.
 * Criação de um header próprio para guardar a struct de leituras do sensor -> sensor_controller/sensor_config.h
     - Tanto a main quanto a payload_formatter precisam acessar estes dados
 
-=============================================================== /0/2026 ===============================================================
+=============================================================== 30/06/2026 ===============================================================
 
+----> To-Do's
+    - Calibragem dos sensores!
+    - Ajuste de parâmetros para comunicação com o GW Lora ---> device_config/device_config.h e cli_controller/serial_cli.c
+        - Realmente necessário...?
+    - Verificação do timestamp em caso de perda de energia. Verificar Tempo atual x Tempo no NVS
+    - Comprar conversor de tensão Step-Up
 
+* Downgrade para a versão 6.6.0 da RadioLib -> A versão 7.0.0 reestrutura a lógica para join na rede lora
 
 
 =============================================================== /0/2026 ===============================================================

@@ -6,9 +6,10 @@ Arquivo contendo os headers das funções implementadas no arquivo serial_cli.c
 
 // Include guards
 #ifndef SERIAL_CLI_H
-#define DSERIAL_CLI_H
+#define SERIAL_CLI_H
 
 // Includes 
+#include <stdint.h>
 #include "esp_err.h"
 
 /**

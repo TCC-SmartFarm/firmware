@@ -51,14 +51,6 @@ esp_err_t sdcard_read_chunk(const char* file_path, size_t offset, char* buffer, 
 esp_err_t sdcard_unmount(const char* mount_point);
 
 /**
- * @brief Função para teste do ciclo de vida do cartão SD.
- * * @param host_id Identificador do barramento SPI previamente inicializado (ex: SPI2_HOST).
- * @param cs_pin Pino de Chip Select (CS) específico para o módulo do cartão SD.
- * @return esp_err_t ESP_OK em caso de sucesso.
- */
-esp_err_t sdcard_debug_lifecycle(spi_host_device_t host_id, int cs_pin);
-
-/**
  * @brief Calcula o espaço livre disponível no cartão SD.
  * @return uint64_t Espaço livre em Kilobytes (KB). Retorna 0 em caso de falha.
  */
