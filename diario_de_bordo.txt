@@ -436,6 +436,10 @@ e reutilizá-los em transmissões futuras.
 
 * Downgrade para a versão 6.6.0 da RadioLib -> A versão 7.0.0 reestrutura a lógica para join na rede lora
 
+* Adaptações na lógica de join na rede
+    - Faz o primeiro Join como OTAA e salva as credenciais
+    - Na proxima tentativa, realiza a transmissão como se fosse ABP, mas com as credenciais da sessão anterior
+
 
 =============================================================== /0/2026 ===============================================================
 

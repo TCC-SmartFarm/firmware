@@ -16,18 +16,27 @@ static const char *TAG = "bus";
 // ----------------------------------------------------------------- SPI -----------------------------------------------------------------
 esp_err_t bus_spi_init(spi_host_device_t host_id, int mosi_pin, int miso_pin, int sclk_pin, int max_transfer_sz) {
     // Configuração física do barramento
-    spi_bus_config_t bus_config = {
-        .mosi_io_num = mosi_pin,
-        .miso_io_num = miso_pin,
-        .sclk_io_num = sclk_pin,
-        .quadwp_io_num = -1, // Não utilizado 
-        .quadhd_io_num = -1, // Não utilizado
-        .max_transfer_sz = max_transfer_sz
-    };
+    // Log para auditar se o bus.h inverteu a ordem passada pela main
+    ESP_LOGI(TAG, "Iniciando SPI (Host: %d) -> MOSI: %d | MISO: %d | SCK: %d", host_id, mosi_pin, miso_pin, sclk_pin);
 
-    ESP_LOGI(TAG, "Inicializando barramento SPI (Host ID: %d)", host_id);
+    // 1. Zera a struct inteira para limpar lixo de memória
+    spi_bus_config_t bus_config = {0};
 
-    // Inicializacao do barramento
+    // 2. Mapeamento explícito. TODOS os pinos não utilizados DEVEM ser -1.
+    bus_config.mosi_io_num = mosi_pin;
+    bus_config.miso_io_num = miso_pin;
+    bus_config.sclk_io_num = sclk_pin;
+    bus_config.quadwp_io_num = -1;
+    bus_config.quadhd_io_num = -1;
+    bus_config.data4_io_num = -1;
+    bus_config.data5_io_num = -1;
+    bus_config.data6_io_num = -1;
+    bus_config.data7_io_num = -1;
+    bus_config.max_transfer_sz = max_transfer_sz;
+    bus_config.flags = 0;
+    bus_config.intr_flags = 0;
+
+    // Inicialização do barramento
     esp_err_t ret = spi_bus_initialize(host_id, &bus_config, SPI_DMA_CH_AUTO);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Falha na inicialização do barramento SPI (%s)", esp_err_to_name(ret));
