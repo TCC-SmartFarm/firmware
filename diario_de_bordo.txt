@@ -456,7 +456,7 @@ e reutilizá-los em transmissões futuras.
 
 * Não utilizar protocolo de autenticação OTAA -> Indicado para ambiente de produção apenas. Seguir com ABP 
 
-* Multiplos testes de comunicação com o módulo SX1276. Funcionou quando remontado em outra protoboard -> Capacitância parasita?
+* Multiplos testes de comunicação com o módulo SX1276. Funcionou quando remontado sozinho em outra protoboard -> Capacitância parasita?
     - Não deixar o fio desemcapado no pino de clock!
     - Talvez ressoldar os pinos, colocando alguns para o lado da placa para ter mais espaço
 

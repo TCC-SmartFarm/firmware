@@ -46,26 +46,24 @@ extern "C" void lorawan_hardware_deinit(void) {
     ESP_LOGI(TAG, "Recursos de hardware do LoRaWAN liberados.");
 }
 
-extern "C" esp_err_t lorawan_join(const lorawan_keys_t *keys) {
+extern "C" esp_err_t lorawan_activate_abp(const lorawan_keys_t *keys) {
     if (!node || !keys) {
         ESP_LOGE(TAG, "Motor LoRaWAN nao inicializado ou chaves nulas.");
         return ESP_ERR_INVALID_STATE;
     }
 
-    // Conversão do formato byte array (MSB) para o uint64_t interno da RadioLib
-    uint64_t joinEUI = 0;
-    uint64_t devEUI = 0;
-    for (int i = 0; i < 8; i++) {
-        joinEUI = (joinEUI << 8) | keys->join_eui[i];
-        devEUI = (devEUI << 8) | keys->dev_eui[i];
+    ESP_LOGI(TAG, "Iniciando ativacao ABP...");
+    
+    // A ativação ABP é imediata. Os parâmetros são os ponteiros diretos para as chaves.
+    int16_t state = node->beginABP(keys->dev_addr, (uint8_t*)keys->nwk_s_key, (uint8_t*)keys->app_s_key);
+    
+    if (state == RADIOLIB_ERR_NONE) {
+        ESP_LOGI(TAG, "Dispositivo ativado via ABP com sucesso.");
+        return ESP_OK;
+    } else {
+        ESP_LOGE(TAG, "Falha na ativacao ABP. Erro: %d", state);
+        return ESP_FAIL;
     }
-
-    // beginOTAA lida com o Request e aguarda o Accept na janela RX correta
-    ESP_LOGI(TAG, "Iniciando processo de Join (OTAA)...");
-    node->beginOTAA(joinEUI, devEUI, (uint8_t*)keys->app_key, (uint8_t*)keys->app_key);
-
-    ESP_LOGI(TAG, "Processo OTAA concluido!");
-    return ESP_OK;
 }
 
 extern "C" esp_err_t lorawan_save_session(uint8_t *session_buffer) {

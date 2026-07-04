@@ -24,13 +24,12 @@ typedef struct {
 } lorawan_hal_config_t;
 
 /**
- * @brief Credenciais criptográficas padrão LoRaWAN 1.0.x (OTAA).
- * Estes valores devem ser extraídos da memória NVS ou definidos no meun de configuração.
+ * @brief Credenciais estáticas para ativação ABP -> Recomendado para prototipagem (Verificador de frame counter desabilitado no GW)
  */
 typedef struct {
-    uint8_t dev_eui[8];   // Identificador único do dispositivo
-    uint8_t join_eui[8];  // Identificador da aplicação (AppEUI)
-    uint8_t app_key[16];  // Chave criptográfica de sessão
+    uint32_t dev_addr;      // Device Address (4 bytes)
+    uint8_t nwk_s_key[16];  // Network Session Key (16 bytes)
+    uint8_t app_s_key[16];  // Application Session Key (16 bytes)
 } lorawan_keys_t;
 
 /**
@@ -44,9 +43,9 @@ esp_err_t lorawan_hardware_init(const lorawan_hal_config_t *hal_conf);
 void lorawan_hardware_deinit(void);
 
 /**
- * @brief Inicia o processo de Join (OTAA) na rede LoRaWAN.
+ * @brief Ativa o dispositivo na rede LoRaWAN via ABP.
  */
-esp_err_t lorawan_join(const lorawan_keys_t *keys);
+esp_err_t lorawan_activate_abp(const lorawan_keys_t *keys);
 
 /**
  * @brief Salva o estado atual da sessão MAC LoRaWAN.
