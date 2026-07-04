@@ -4,84 +4,424 @@ Arquivo contendo o loop principal de execução.
 
 */
 
-
-
+// Includes de sistema
 #include <stdio.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <time.h>
+#include <sys/time.h>
+#include <sys/stat.h>
+#include <dirent.h>
+#include <unistd.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "driver/spi_master.h"
-#include "driver/gpio.h"
 #include "esp_log.h"
-#include "bus.h" // Importando a sua camada de abstração
+#include "esp_sleep.h"
+#include "esp_attr.h"
 
-// =========================================================
-// ATUALIZE ESTES VALORES PARA OS SEUS PINOS REAIS
-#define PIN_NUM_MISO 19 
-#define PIN_NUM_MOSI 23 
-#define PIN_NUM_CLK  18 
-#define PIN_NUM_CS   26 
-#define PIN_NUM_RST  25 
-// =========================================================
+// Includes dos componetes
+#include "bus.h"
+#include "sdcard.h"
+#include "air_sensor.h"
+#include "soil_sensor.h"
+#include "light_sensor.h"
+#include "sensor_data.h"
+#include "device_config.h"
+#include "serial_cli.h"
+#include "lorawan_config.h"
+#include "payload_formatter.h"
 
-static const char *TAG = "SPI_BRIDGE_TEST";
+static const char *TAG = "main";
+
+/* ------------------------------ Pinagens e Constantes --------------------------------------*/
+
+// DeepSleep
+#define SLEEP_DURATION_MIN          0.2 // Tempo que o módulo deverá passar em deepsleep em minutos
+
+// Botão de Menu
+#define PIN_NUM_SETUP_BUTTON        33 
+
+// Barramento I²C
+#define PIN_NUM_I2C_SCL             22
+#define PIN_NUM_I2C_SDA             21
+#define I2C_MASTER_NUM              I2C_NUM_0  // Interface I2C Zero do ESP32
+#define I2C_FREQ_HZ                 400000    // Alterar este valor para mudar o modo de operação (Fast Mode = 400kHZ)
+
+
+// Barramento SPI
+#define SPI_HOST_ID              SPI2_HOST
+#define PIN_NUM_SPI_MISO         19
+#define PIN_NUM_SPI_MOSI         23
+#define PIN_NUM_SPI_CLK          18
+#define SPI_MAX_TRANSFER         4000
+
+// Memória RTC
+RTC_DATA_ATTR static bool rtc_lora_session_valid = false;                       // Verificador da existencia de uma sessão (p/ cold boot i.e)
+RTC_DATA_ATTR static uint8_t rtc_lora_session_buffer[LORAWAN_SESSION_BUF_SIZE]; // Buffer para estado de sessão lora
+RTC_DATA_ATTR static uint32_t rtc_uplink_counter = 0;                           // Contador para backup
+
+
+
+// Conversor AD externo - ADS1115 (I²C)
+#define ADS1115_I2C_ADDRESS         0x48    // Endereço padrão (ADDR ligado em GND)
+#define ADS1115_CHANNEL_HIG         0       // Canal A0 -> Higrômetro
+#define ADS1115_CHANNEL_LDR         1       // Canal A1 -> LDR
+                                    // Amostragem
+#define NUM_READINGS            5   // Número de amostras de sensores analógicos
+#define ADC_SAMPLE_DELAY_MS    20   // Delay entre as amostras
+
+// Cartão SD (SPI)
+#define PIN_NUM_SPI_CS_SD        5
+#define MOUNT_POINT              "/sdcard"  // Ponto de montagem
+#define MAX_FILE_SIZE_BYTES 1024  // ------------------------------------ TESTE: 1 KB para forçar a rotação rápida
+#define MAX_LOG_FILES       5     // ------------------------------------ TESTE: 5 arquivos no máximo
+
+// DHT
+#define PIN_NUM_SDA_DHT             13
+
+// Módulo Lora
+#define PIN_NUM_CS_LORA             26      // Chip select (NSS) -> LoRa
+#define PIN_NUM_RST_LORA            25      // Pino para resetar o módulo
+#define PIN_NUM_DIO0_LORA           32 
+#define PIN_NUM_DIO1_LORA           27      
+#define LORAWAN_SESSION_BUF_SIZE    256     // Tamanho do buffer (denifino em lorawan_config.h)
+#define NVS_BACKUP_INTERVAL         50      // Backup na Flash a cada 50 transmissões
+
+
+
+/* ------------------------------ Protótipos - Funções de Orquestração --------------------------------------*/
+
+/**
+ * @brief Executa o ciclo de configuração via serial ou wifi.
+ */
+static void execute_user_setup_cycle(void);
+
+/**
+ * @brief Inicializa a infraestrutura de barramentos (SPI e I2C) do sistema.
+ * @return esp_err_t ESP_OK se todos os barramentos foram inicializados com sucesso.
+ * Retorna o código de erro específico caso algum barramento falhe.
+ */
+
+static esp_err_t system_bus_init(void);
+
+/**
+ * @brief Instancia os drivers dos sensores, efetua uma leitura e agrupa os resultados.
+ * @return sensor_data_t Struct contendo os valores numéricos e uma flag de erro ou sucesso das leituras.
+ */
+static sensor_data_t execute_reading_cycle(void);
+
+/**
+ * @brief Monta o sistema de arquivos, formata o pacote em CSV e anexa os dados.
+ * @param data Ponteiro para a struct contendo os dados do ciclo.
+ */
+static void save_to_sd_card(const sensor_data_t *data);
+
+/**
+ * @brief Liberta os barramentos, desliga periféricos e define como acordar do Deep Sleep.
+ */
+static void prepare_deep_sleep_and_shutdown(void);
+
+/* ------------------------------ Protótipos - Funções Auxiliares --------------------------------------*/
+
+
+/* ------------------------------ Loop Principal - app_main()  --------------------------------------*/
 
 void app_main(void) {
-    ESP_LOGI(TAG, "Iniciando teste de integração com o bus_controller...");
-    vTaskDelay(pdMS_TO_TICKS(10000));
 
-    // 1. Reset manual do chip (Ainda necessário pois não estamos usando a RadioLib)
-    ESP_LOGI(TAG, "Aplicando Reset no pino %d...", PIN_NUM_RST);
-    gpio_set_direction(PIN_NUM_RST, GPIO_MODE_OUTPUT);
-    gpio_set_level(PIN_NUM_RST, 0); 
-    vTaskDelay(pdMS_TO_TICKS(10));
-    gpio_set_level(PIN_NUM_RST, 1); 
-    vTaskDelay(pdMS_TO_TICKS(10));
+vTaskDelay(pdMS_TO_TICKS(1000)); // Aguarda estabilização do monitor serial
+    ESP_LOGI(TAG, "\n========== Iniciando Teste Isolado de Hardware LoRa ==========\n");
 
-    // 2. Inicialização usando a SUA função do bus_controller
-    ESP_LOGI(TAG, "Chamando bus_spi_init...");
-    esp_err_t err = bus_spi_init(SPI2_HOST, PIN_NUM_MOSI, PIN_NUM_MISO, PIN_NUM_CLK, 32);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "bus_spi_init falhou: %s", esp_err_to_name(err));
-        return;
+    // 1. Inicializa o barramento SPI
+    system_bus_init();
+
+    // 2. Preenche a estrutura de configuração do HAL
+    lorawan_hal_config_t lora_cfg = {
+        .spi_host_id = SPI_HOST_ID,
+        .nss_pin = PIN_NUM_CS_LORA,
+        .rst_pin = PIN_NUM_RST_LORA,
+        .dio0_pin = PIN_NUM_DIO0_LORA,
+        .dio1_pin = PIN_NUM_DIO1_LORA
+    };
+
+    // 3. Testa a inicialização e comunicação com o SX1276
+    if (lorawan_hardware_init(&lora_cfg) == ESP_OK) {
+        ESP_LOGI(TAG, "Comunicacao SPI com SX1276 estabelecida com sucesso!");
+    } else {
+        ESP_LOGE(TAG, "Falha na comunicacao com o modulo SX1276.");
+        ESP_LOGE(TAG, "Verifique o cabeamento, alimentacao e se os pinos correspondem.");
+        bus_spi_free(SPI_HOST_ID);
+        return; // Aborta o teste em caso de falha física
     }
 
-    // 3. Adicionar o dispositivo ao barramento (Mock do que o EspHal deveria fazer)
-    spi_device_interface_config_t devcfg = {
-        .clock_speed_hz = 1000000, // 1 MHz
-        .mode = 0,                 
-        .spics_io_num = PIN_NUM_CS, // CS controlado pelo hardware neste teste
-        .queue_size = 1,
-    };
+    // Mantém o rádio ligado por um breve período para observação
+    vTaskDelay(pdMS_TO_TICKS(2000)); 
+
+    // 4. Testa o comando de Sleep do rádio
+    if (lorawan_node_sleep() == ESP_OK) {
+        ESP_LOGI(TAG, "SX1276 entrou em modo Sleep com sucesso.");
+    } else {
+        ESP_LOGE(TAG, "Falha ao enviar comando de Sleep para o SX1276.");
+    }
+
+    // 5. Tear Down e Deep Sleep do ESP32
+    ESP_LOGI(TAG, "Liberando recursos de hardware...");
+    lorawan_hardware_deinit(); // Limpa ponteiros do C++ (RadioLib/EspHal)
+    bus_spi_free(SPI_HOST_ID);
+
+    ESP_LOGI(TAG, "ESP32 entrando em Deep Sleep por 10 segundos para validar o ciclo...");
+    vTaskDelay(pdMS_TO_TICKS(100)); // Tempo para flush do log na UART
+
+    prepare_deep_sleep_and_shutdown();
+}
+
+
+/* ------------------------------ Funções de Orquestração --------------------------------------*/
+
+static void execute_user_setup_cycle(void) {
+    ESP_LOGI(TAG, "\n========== Iniciando Ciclo de Configuracao ==========\n");
+    ESP_LOGI(TAG, "Inicializando interface UART para teste de presenca...");
     
-    spi_device_handle_t spi;
-    err = spi_bus_add_device(SPI2_HOST, &devcfg, &spi);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Falha ao adicionar dispositivo na via SPI: %s", esp_err_to_name(err));
-        return;
+    if (uart_cli_init() == ESP_OK) { 
+        ESP_LOGI(TAG, "Aguardando 5 segundos por atividade na porta Serial...");
+        
+        bool serial_active = uart_cli_wait_for_user(5000); 
+
+        if (serial_active) {
+            ESP_LOGI(TAG, "Atividade detetada. Abrindo Menu de Configuracao.");
+            uart_cli_run_menu(); 
+        } else {
+            ESP_LOGW(TAG, "Timeout atingido sem atividade serial.");
+            ESP_LOGI(TAG, "[Simulacao] Iniciando Portal Wi-Fi AP... (Pulado para teste)");
+        }
+    } else {
+        ESP_LOGE(TAG, "Erro ao inicializar o driver UART.");
+    }
+}
+
+static esp_err_t system_bus_init(void) {
+
+    ESP_LOGI(TAG, "\n========== Inicializando Barramentos... ============\n");
+    esp_err_t ret;
+
+    // SPI
+    ret = bus_spi_init(SPI_HOST_ID, PIN_NUM_SPI_MOSI, PIN_NUM_SPI_MISO, PIN_NUM_SPI_CLK, SPI_MAX_TRANSFER);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Falha critica: Nao foi possivel inicializar o barramento SPI.");
+        return ret;
     }
 
-    // 4. Transação SPI: Ler o Registrador 0x42 (RegVersion)
-    uint8_t tx_data[2] = { 0x42, 0x00 }; 
-    uint8_t rx_data[2] = { 0x00, 0x00 }; 
+    // I2C
+    ret = bus_i2c_init(I2C_MASTER_NUM, PIN_NUM_I2C_SDA, PIN_NUM_I2C_SCL, I2C_FREQ_HZ);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Falha critica: Nao foi possivel inicializar o barramento I2C.");
+        
+        // Liberação do barramento em caso de falha
+        bus_spi_free(SPI_HOST_ID);
+        
+        return ret;
+    }
 
-    spi_transaction_t t = {
-        .length = 16, 
-        .tx_buffer = tx_data,
-        .rx_buffer = rx_data
-    };
+    // Ok!
+    ESP_LOGI(TAG, "Todos os barramentos inicializados com sucesso.");
+    return ESP_OK;
+}
 
-    ESP_LOGI(TAG, "Lendo o registrador 0x42 (RegVersion)...");
-    err = spi_device_transmit(spi, &t);
+static sensor_data_t execute_reading_cycle(void) {
 
-    if (err == ESP_OK) {
-        if (rx_data[1] == 0x12 || rx_data[1] == 0x22) {
-            ESP_LOGI(TAG, "[SUCESSO] bus_controller operante! Versão lida: 0x%02X", rx_data[1]);
-        } else {
-            ESP_LOGE(TAG, "[FALHA] bus_controller não comunicou corretamente. Retorno: 0x%02X", rx_data[1]);
+    ESP_LOGI(TAG, "Iniciando ciclo de aquisição de dados...");
+    
+    // Inicialização da struct
+    sensor_data_t data = {0}; 
+    data.is_valid = false;
+
+    // Inicialização dos sensores
+    esp_err_t ret_air = air_sensor_init(PIN_NUM_SDA_DHT);
+    esp_err_t ret_soil = soil_sensor_init_ads1115(I2C_MASTER_NUM, ADS1115_I2C_ADDRESS, ADS1115_CHANNEL_HIG);
+    esp_err_t ret_ldr = light_sensor_init(I2C_MASTER_NUM, ADS1115_I2C_ADDRESS, ADS1115_CHANNEL_LDR);
+
+    // Verificação da inicialização
+    if (ret_air != ESP_OK || ret_soil != ESP_OK || ret_ldr != ESP_OK) {
+        ESP_LOGE(TAG, "Falha ao instanciar os drivers dos sensores. Abortando leitura.");
+        return data; // is_valid = false
+    }
+
+    // Timestamp da leitura
+    time(&data.timestamp);
+
+    // Delay para estabilização dos sensores
+    ESP_LOGI(TAG, "Aguardando estabilização dos sensores (2 segundos)...");
+    vTaskDelay(pdMS_TO_TICKS(2000));
+
+    // Leitura do DHT22 
+    float air_temp_val = 0, air_hum_val = 0;
+    ret_air = air_sensor_read(&air_temp_val, &air_hum_val);
+    if (ret_air != ESP_OK) {
+        ESP_LOGE(TAG, "Falha na leitura do DHT22.");
+    }
+
+    // Acumuladores para as leituras analógicas
+    float acc_soil_hum = 0;
+    float acc_light_perc = 0;
+    int valid_soil_samples = 0;
+    int valid_ldr_samples = 0;
+
+    ESP_LOGI(TAG, "Coletando amostras dos sensores analógicos...");
+    for (int i = 0; i < NUM_READINGS; i++) {
+        float sample_soil = 0;
+        float sample_light = 0;
+
+        if (soil_sensor_read_ads1115(&sample_soil) == ESP_OK) {
+            acc_soil_hum += sample_soil;
+            valid_soil_samples++;
+        }
+
+        if (light_sensor_read(&sample_light) == ESP_OK) {
+            acc_light_perc += sample_light;
+            valid_ldr_samples++;
+        }
+
+        // Pequeno atraso para o ADC processar a próxima conversão e filtrar ruído AC
+        if (i < NUM_READINGS - 1) {
+            vTaskDelay(pdMS_TO_TICKS(ADC_SAMPLE_DELAY_MS));
         }
     }
 
-    // Limpeza (Testando o bus_spi_free também)
-    spi_bus_remove_device(spi);
-    bus_spi_free(SPI2_HOST);
+    // Validação e calculo das médias
+    if (ret_air == ESP_OK && valid_soil_samples > 0 && valid_ldr_samples > 0) {
+        
+        data.air_temp = air_temp_val;
+        data.air_hum = air_hum_val;
+        
+        // Cálculo da média aritmética
+        data.soil_hum = acc_soil_hum / valid_soil_samples;
+        data.light_perc = acc_light_perc / valid_ldr_samples;
+        
+        data.is_valid = true; 
+
+        ESP_LOGI(TAG, "Ciclo concluido com sucesso! (Medias calculadas com base em %d/%d amostras)", 
+                 valid_soil_samples, NUM_READINGS);
+                 
+        ESP_LOGI(TAG, "Timestamp - %lld | Valores -> Ar: %.1fC / %.1f%% | Solo: %.1f%% | Luz: %.1f%%", 
+                 (long long)data.timestamp, data.air_temp, data.air_hum, data.soil_hum, data.light_perc);
+    } else {
+        ESP_LOGE(TAG, "Falha critica: Amostras insuficientes para gerar a media dos sensores.");
+    }
+
+    return data;
 }
+
+static void save_to_sd_card(const sensor_data_t *data) {
+    // Verifica se o dado é válido
+    if (!data->is_valid) return;
+
+    // Configura o cartão SD
+    if (sdcard_config(SPI_HOST_ID, PIN_NUM_SPI_CS_SD, MOUNT_POINT) != ESP_OK) {
+        return;
+    }
+
+    // Tenta acessar o sistema de arquivos
+    DIR *dir = opendir(MOUNT_POINT);
+    if (!dir) {
+        ESP_LOGE(TAG, "Falha ao abrir diretorio do SD.");
+        sdcard_unmount(MOUNT_POINT);
+        return;
+    }
+
+    // Variáveis para busca do log mais antigo
+    struct dirent *entry;
+    long long latest_timestamp = -1;
+    long long oldest_timestamp = -1;
+    char oldest_filename[64] = {0};
+    int file_count = 0;
+
+    // Busca para achar o log mais antigo
+    while ((entry = readdir(dir)) != NULL) {
+        if (strncmp(entry->d_name, "log_", 4) == 0) {
+            file_count++;
+            long long ts = 0;
+            if (sscanf(entry->d_name, "log_%lld.csv", &ts) == 1) {
+                if (ts > latest_timestamp) latest_timestamp = ts;
+                if (oldest_timestamp == -1 || ts < oldest_timestamp) {
+                    oldest_timestamp = ts;
+                    strncpy(oldest_filename, entry->d_name, sizeof(oldest_filename) - 1);
+                }
+            }
+        }
+    }
+    closedir(dir);
+
+    // Exlcusão caso o armazenamento esteja cheio
+    if (file_count >= MAX_LOG_FILES && oldest_timestamp != -1) {
+        char path_to_delete[128];
+        snprintf(path_to_delete, sizeof(path_to_delete), "%s/%s", MOUNT_POINT, oldest_filename);
+        ESP_LOGW(TAG, "Limite de arquivos atingido (%d). Apagando o mais antigo: %s", MAX_LOG_FILES, path_to_delete);
+        unlink(path_to_delete);
+    }
+
+    // Rotação de arquivos
+    bool create_new_file = false;
+    char current_file_path[128];
+    
+    if (latest_timestamp == -1) {
+        create_new_file = true; // Primeiro arquivo do cartão SD
+    } else {
+        snprintf(current_file_path, sizeof(current_file_path), "%s/log_%lld.csv", MOUNT_POINT, latest_timestamp);
+        struct stat st;
+        if (stat(current_file_path, &st) == 0) {
+            if (st.st_size >= MAX_FILE_SIZE_BYTES) {
+                create_new_file = true;
+                ESP_LOGI(TAG, "Arquivo atual atingiu o limite de tamanho. Rotacionando...");
+            }
+        }
+    }
+
+    // Atualiza o timestamp se precisar criar arquivo novo
+    if (create_new_file) {
+        latest_timestamp = (long long)data->timestamp;
+        snprintf(current_file_path, sizeof(current_file_path), "%s/log_%lld.csv", MOUNT_POINT, latest_timestamp);
+    }
+
+    // Gravação da leitura
+    char csv_buffer[128];
+    snprintf(csv_buffer, sizeof(csv_buffer), "%lld,%.2f,%.2f,%.2f,%.2f\n", 
+             (long long)data->timestamp, data->air_temp, data->air_hum, data->soil_hum, data->light_perc);
+
+    if (sdcard_write(current_file_path, csv_buffer) != ESP_OK) {
+        ESP_LOGE(TAG, "Erro ao gravar no arquivo %s", current_file_path);
+    } else {
+        ESP_LOGI(TAG, "Dados gravados em: %s", current_file_path);
+    }
+
+    // Desmontagem do sistema de arquivos
+    sdcard_unmount(MOUNT_POINT);
+}
+
+static void prepare_deep_sleep_and_shutdown(void) {
+    ESP_LOGI(TAG, "Iniciando Tear Down do sistema...");
+
+    //Liberação dos barramentos
+    bus_i2c_free(I2C_MASTER_NUM);
+    bus_spi_free(SPI_HOST_ID);
+
+    // Definindo o despertador
+    const uint64_t wakeup_time_sec = SLEEP_DURATION_MIN * 60; // Minutos para segundos
+    esp_sleep_enable_timer_wakeup(wakeup_time_sec * 1000000ULL); // Segundos para microssegundos
+    ESP_LOGI(TAG, "Despertador configurado para %i minutos.", SLEEP_DURATION_MIN);
+
+    // Definindo a fonte externa de Wake-Up (Botão ---> Menu de configuração)
+    esp_sleep_enable_ext0_wakeup(PIN_NUM_SETUP_BUTTON, 1); 
+
+
+    ESP_LOGI(TAG, "Dromindo...");
+    
+    // Delay para registro da mensagem
+    vTaskDelay(pdMS_TO_TICKS(100)); 
+
+    // Entra em deep sleep
+    esp_deep_sleep_start();
+}
+
+/* --------------------------------- Funções Auxiliares ----------------------------------------*/
+
+
+

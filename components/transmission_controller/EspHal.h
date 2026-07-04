@@ -1,14 +1,3 @@
-/*
-
-Camada de abstração para a ESP-IDF da RadioLib por Jan Gromes
-
-\see https://github.com/jgromes/RadioLib
-\see https://github.com/jgromes/RadioLib/blob/master/src/hal/ESP-IDF/EspHal.h
-
-\copyright  Copyright (c) 2019 Jan Gromes
-
-*/
-
 // EspHal.h
 // ESP-IDF HAL for RadioLib using spi_master driver
 // This avoids conflicts with other SPI devices on the same bus
@@ -74,6 +63,7 @@ public:
             RadioLibTime_t duration = 0) override;
   void noTone(uint32_t pin) override;
   void yield() override;
+  void pullUpDown(uint32_t pin, bool enable, bool up);
 
 private:
   int8_t spiSCK;

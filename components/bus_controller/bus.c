@@ -14,7 +14,7 @@ static const char *TAG = "bus";
 
 
 // ----------------------------------------------------------------- SPI -----------------------------------------------------------------
-esp_err_t bus_spi_init(spi_host_device_t host_id, int mosi_pin, int miso_pin, int sclk_pin, int max_transfer_sz) {
+/*esp_err_t bus_spi_init(spi_host_device_t host_id, int mosi_pin, int miso_pin, int sclk_pin, int max_transfer_sz) {
     // Configuração física do barramento
     // Log para auditar se o bus.h inverteu a ordem passada pela main
     ESP_LOGI(TAG, "Iniciando SPI (Host: %d) -> MOSI: %d | MISO: %d | SCK: %d", host_id, mosi_pin, miso_pin, sclk_pin);
@@ -38,6 +38,36 @@ esp_err_t bus_spi_init(spi_host_device_t host_id, int mosi_pin, int miso_pin, in
 
     // Inicialização do barramento
     esp_err_t ret = spi_bus_initialize(host_id, &bus_config, SPI_DMA_CH_AUTO);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Falha na inicialização do barramento SPI (%s)", esp_err_to_name(ret));
+        return ret;
+    }
+
+    ESP_LOGI(TAG, "Barramento SPI inicializado com sucesso.");
+    return ESP_OK;
+}
+*/
+esp_err_t bus_spi_init(spi_host_device_t host_id, int mosi_pin, int miso_pin, int sclk_pin, int max_transfer_sz) {
+    ESP_LOGI(TAG, "Iniciando SPI dinâmico (Host: %d) -> MOSI: %d | MISO: %d | SCK: %d", host_id, mosi_pin, miso_pin, sclk_pin);
+
+    // 1. Inicialização zerada obrigatória
+    spi_bus_config_t bus_config = {0};
+
+    // 2. Atribuição de pinos (todos os não utilizados obrigatoriamente como -1)
+    bus_config.mosi_io_num = mosi_pin;
+    bus_config.miso_io_num = miso_pin;
+    bus_config.sclk_io_num = sclk_pin;
+    bus_config.quadwp_io_num = -1;
+    bus_config.quadhd_io_num = -1;
+    bus_config.data4_io_num = -1;
+    bus_config.data5_io_num = -1;
+    bus_config.data6_io_num = -1;
+    bus_config.data7_io_num = -1;
+    bus_config.max_transfer_sz = max_transfer_sz;
+
+    // 3. Inicialização com DMA automático (exatamente como no bare-metal)
+    esp_err_t ret = spi_bus_initialize(host_id, &bus_config, SPI_DMA_CH_AUTO);
+    
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Falha na inicialização do barramento SPI (%s)", esp_err_to_name(ret));
         return ret;

@@ -24,8 +24,8 @@ extern "C" esp_err_t lorawan_hardware_init(const lorawan_hal_config_t *hal_conf)
         // Instancia um objeto "Module" com os pinos especificados
         mod = new Module(hal, hal_conf->nss_pin, hal_conf->dio0_pin, hal_conf->rst_pin, hal_conf->dio1_pin);
         radio = new SX1276(mod);
-        // Frequencia de operação (915MHz)
-        node = new LoRaWANNode(radio, &AU915); 
+        // Frequencia de operação (915MHz) e Sub-Banda 2
+        node = new LoRaWANNode(radio, &AU915, 2); 
     }
 
     // Inicialização do módulo

@@ -1,15 +1,3 @@
-/*
-
-Camada de abstração para a ESP-IDF da RadioLib por Jan Gromes
-
-\see https://github.com/jgromes/RadioLib
-\see https://github.com/jgromes/RadioLib/blob/master/src/hal/ESP-IDF/EspHal.cpp
-
-\copyright  Copyright (c) 2019 Jan Gromes
-
-*/
-
-
 // EspHal.cpp
 // Definitions for the ESP-IDF HAL.
 
@@ -185,8 +173,6 @@ void EspHal::spiBegin() {
   bus_config.isr_cpu_id = ESP_INTR_CPU_AFFINITY_AUTO;
   bus_config.intr_flags = 0;
 
-  esp_err_t ret;
-  /* 
   esp_err_t ret = spi_bus_initialize(spiHost, &bus_config, SPI_DMA_CH_AUTO);
   if (ret == ESP_OK) {
     busInitialized = true;
@@ -200,8 +186,7 @@ void EspHal::spiBegin() {
              esp_err_to_name(ret));
     return;
   }
-  */
- 
+
   // Add the device. CS is left to RadioLib (software-driven via
   // digitalWrite on the Module's csPin), so spics_io_num is -1.
   spi_device_interface_config_t dev_config = {};
@@ -213,7 +198,7 @@ void EspHal::spiBegin() {
   dev_config.duty_cycle_pos = 128; // 50% duty cycle
   dev_config.cs_ena_pretrans = 0;
   dev_config.cs_ena_posttrans = 0;
-  dev_config.clock_speed_hz = 500000;
+  dev_config.clock_speed_hz = (int)spiClockHz;
   dev_config.input_delay_ns = 0;
   dev_config.spics_io_num = -1; // RadioLib drives CS in software
   dev_config.flags = 0;
@@ -266,7 +251,6 @@ void EspHal::spiEndTransaction() {
   }
 }
 
-/*
 void EspHal::spiEnd() {
   // Remove device from bus
   if (deviceAdded && spiDevice != nullptr) {
@@ -283,21 +267,7 @@ void EspHal::spiEnd() {
     ESP_LOGD("EspHal", "SPI bus freed");
   }
 }
-*/
 
-// Versão adaptada levando em consideração o controle interno do barramento
-void EspHal::spiEnd() {
-    // Remove o dispositivo anexado ao barramento
-    if (deviceAdded) {
-        esp_err_t ret = spi_bus_remove_device(spiDevice);
-        if (ret == ESP_OK) {
-            deviceAdded = false;
-            ESP_LOGD("EspHal", "Dispositivo SPI removido com sucesso.");
-        } else {
-            ESP_LOGE("EspHal", "Falha ao remover o dispositivo SPI: %s", esp_err_to_name(ret));
-        }
-    }
-}
 // implementations of virtual RadioLibHal methods
 
 void EspHal::init() {
@@ -372,5 +342,18 @@ void EspHal::noTone(uint32_t pin) {
 }
 
 void EspHal::yield() { taskYIELD(); }
+
+void EspHal::pullUpDown(uint32_t pin, bool enable, bool up) {
+  if (pin == RADIOLIB_NC) {
+    return;
+  }
+
+  if (enable) {
+    gpio_set_pull_mode((gpio_num_t)pin,
+                       up ? GPIO_PULLUP_ONLY : GPIO_PULLDOWN_ONLY);
+  } else {
+    gpio_set_pull_mode((gpio_num_t)pin, GPIO_FLOATING);
+  }
+}
 
 #endif // ESP_PLATFORM
