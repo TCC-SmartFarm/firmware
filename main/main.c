@@ -117,6 +117,13 @@ static sensor_data_t execute_reading_cycle(void);
 static void save_to_sd_card(const sensor_data_t *data);
 
 /**
+ * @brief Autentica na rede LoRa, formata os dados coletados e transmite.
+ * @param data Ponteiro para a struct contendo os dados a serem transmitidos.
+ * @param config Ponteiro para a struct contendo os parametros persisnteste de conexão.
+ */
+static void execute_transmission_cycle(const sensor_data_t *data, const user_config_t *config);
+
+/**
  * @brief Liberta os barramentos, desliga periféricos e define como acordar do Deep Sleep.
  */
 static void prepare_deep_sleep_and_shutdown(void);
@@ -394,6 +401,64 @@ static void save_to_sd_card(const sensor_data_t *data) {
 
     // Desmontagem do sistema de arquivos
     sdcard_unmount(MOUNT_POINT);
+}
+
+static void execute_transmission_cycle(const sensor_data_t *data, const user_config_t *config) {
+    ESP_LOGI(TAG, "\n========== Iniciando Transmissao LoRaWAN ==========\n");
+
+    // Validação de dados e configuração
+    if (!data->is_valid) {
+        ESP_LOGE(TAG, "Dados invalidos. Abortando transmissao.");
+        return;
+    }
+    if (!config->is_configured) {
+        ESP_LOGE(TAG, "Dispositivo nao configurado. Abortando transmissao.");
+        return;
+    }
+
+    // Acoplamento de Hardware
+    lorawan_hal_config_t hal_conf = {
+        .spi_host_id = SPI_HOST_ID,
+        .nss_pin = PIN_NUM_CS_LORA,
+        .rst_pin = PIN_NUM_RST_LORA,
+        .dio0_pin = PIN_NUM_DIO0_LORA,
+        .dio1_pin = PIN_NUM_DIO1_LORA
+    };
+
+    if (lorawan_hardware_init(&hal_conf) != ESP_OK) {
+        ESP_LOGE(TAG, "Falha na inicializacao fisica do radio.");
+        return;
+    }
+
+    // apeamento de Chaves ABP
+    lorawan_keys_t keys = {0};
+    keys.dev_addr = config->dev_addr;
+    memcpy(keys.nwk_s_key, config->nwk_s_key, 16);
+    memcpy(keys.app_s_key, config->app_s_key, 16);
+
+    // Ativação na Rede
+    if (lorawan_activate_abp(&keys) != ESP_OK) {
+        ESP_LOGE(TAG, "Falha ao ativar dispositivo na rede via ABP.");
+        lorawan_hardware_deinit();
+        return;
+    }
+
+    // Formatação do Payload
+    uint8_t payload[LORAWAN_PAYLOAD_SIZE] = {0};
+    lora_payload_formatter(data, payload);
+    
+    ESP_LOGI(TAG, "Payload formatado (%d bytes). Enviando para a porta 1...", LORAWAN_PAYLOAD_SIZE);
+
+    // Transmissão (Uplink FPort 1)
+    if (lorawan_node_send(1, payload, sizeof(payload)) != ESP_OK) {
+        ESP_LOGE(TAG, "Falha ao despachar o pacote LoRaWAN.");
+    }
+
+    // Liberação dos recursos
+    lorawan_node_sleep(); // Repouso do rádio
+    lorawan_hardware_deinit(); // Liberação de memória dos objetos C++
+    
+    ESP_LOGI(TAG, "Ciclo de transmissao encerrado.");
 }
 
 static void prepare_deep_sleep_and_shutdown(void) {

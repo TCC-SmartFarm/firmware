@@ -463,7 +463,16 @@ e reutilizá-los em transmissões futuras.
 
 =============================================================== /0/2026 ===============================================================
 
+----> To-Do's
+    - Calibragem dos sensores!
+    - Ajuste de parâmetros para comunicação com o GW Lora ---> device_config/device_config.h e cli_controller/serial_cli.c
+        - Realmente necessário...?
+    - Verificação do timestamp em caso de perda de energia. Verificar Tempo atual x Tempo no NVS
+    - Comprar conversor de tensão Step-Up
+    - Conflito arramento SPI -> Cartão SD e SX1276
 
+* Conflito no barramento SPI:
+    - Cartão SD e mõdulo Lora Não funcionam concomitantemente...
 
 
 =============================================================== /0/2026 ===============================================================

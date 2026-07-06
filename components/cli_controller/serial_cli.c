@@ -41,9 +41,9 @@ static void print_main_menu(void) {
     printf("        MENU DE CONFIGURACAO      \n");
     printf("-+H+-+H+-+H+-+H+-+H+-+H+-+H+-+H+-+H+-\n \n");
     printf("[1] Nome do Dispositivo : %s\n", temp_config.device_name[0] ? temp_config.device_name : "(vazio)");
-    printf("[2] DevEUI              : %s\n", temp_config.dev_eui[0] ? temp_config.dev_eui : "(vazio)");
-    printf("[3] JoinEUI             : %s\n", temp_config.join_eui[0] ? temp_config.join_eui : "(vazio)");
-    printf("[4] AppKey              : %s\n", temp_config.app_key[0] ? temp_config.app_key : "(vazio)");
+    printf("[2] Dev Address         : %s\n", temp_config.dev_addr[0] ? temp_config.dev_addr : "(vazio)");
+    printf("[3] NW Session Key      : %s\n", temp_config.nwk_s_key[0] ? temp_config.nwk_s_key : "(vazio)");
+    printf("[4] App Session Key     : %s\n", temp_config.app_s_key[0] ? temp_config.app_s_key : "(vazio)");
     printf("[5] Senha               : %s\n", temp_config.password[0] ? temp_config.password : "(vazio)");
     printf("[6] Data e Hora Atual   : %lu\n",temp_config.setup_date);
     printf("[7] Apagar Configuracoes da Memoria (Reset NVS)\n");
@@ -64,9 +64,9 @@ static void print_current_flash_config(void) {
     if (device_config_load(&flash_cfg) == ESP_OK) {
         printf("\n-+H+- DADOS GRAVADOS NA MEMORIA -+H+-\n");
         printf("Nome do Dispositivo : %s\n", flash_cfg.device_name);
-        printf("DevEUI              : %s\n", flash_cfg.dev_eui);
-        printf("JoinEUI             : %s\n", flash_cfg.join_eui);
-        printf("AppKey              : %s\n", flash_cfg.app_key);
+        printf("DevEUI              : %s\n", flash_cfg.dev_addr);
+        printf("JoinEUI             : %s\n", flash_cfg.nwk_s_key);
+        printf("AppKey              : %s\n", flash_cfg.app_s_key);
         printf("Senha               : %s\n", flash_cfg.password);
         printf("Data e Hora         : %lu\n", flash_cfg.setup_date);
         printf("-+H+-+H+-+H+-+H+-+H+-+H+-+H+-+H+-+H+-\n");
@@ -210,20 +210,20 @@ void uart_cli_run_menu(void) {
 
                              // Submenu ---> DevEUI
                             } else if (submenu_atual == 2) {
-                                strncpy(temp_config.dev_eui, input_buffer, sizeof(temp_config.dev_eui) - 1);
-                                temp_config.dev_eui[sizeof(temp_config.dev_eui) - 1] = '\0';
+                                strncpy(temp_config.dev_addr, input_buffer, sizeof(temp_config.dev_addr) - 1);
+                                temp_config.dev_addr[sizeof(temp_config.dev_addr) - 1] = '\0';
                                 printf("\n[+] Entrada recebida!\n");
 
                              // Submenu ---> JoinEUI
                             } else if (submenu_atual == 3) {
-                                strncpy(temp_config.join_eui, input_buffer, sizeof(temp_config.join_eui) - 1);
-                                temp_config.join_eui[sizeof(temp_config.join_eui) - 1] = '\0';
+                                strncpy(temp_config.nwk_s_key, input_buffer, sizeof(temp_config.nwk_s_key) - 1);
+                                temp_config.nwk_s_key[sizeof(temp_config.nwk_s_key) - 1] = '\0';
                                 printf("\n[+] Entrada recebida!\n");
 
                              // Submenu ---> AppKey
                             } else if (submenu_atual == 4) {
-                                strncpy(temp_config.app_key, input_buffer, sizeof(temp_config.app_key) - 1);
-                                temp_config.app_key[sizeof(temp_config.app_key) - 1] = '\0';
+                                strncpy(temp_config.app_s_key, input_buffer, sizeof(temp_config.app_s_key) - 1);
+                                temp_config.app_s_key[sizeof(temp_config.app_s_key) - 1] = '\0';
                                 printf("\n[+] Entrada recebida!\n");
 
                              // Submenu ---> Senha

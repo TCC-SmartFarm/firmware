@@ -54,10 +54,20 @@ extern "C" esp_err_t lorawan_activate_abp(const lorawan_keys_t *keys) {
 
     ESP_LOGI(TAG, "Iniciando ativacao ABP...");
     
-    // A ativação ABP é imediata. Os parâmetros são os ponteiros diretos para as chaves.
-    int16_t state = node->beginABP(keys->dev_addr, (uint8_t*)keys->nwk_s_key, (uint8_t*)keys->app_s_key);
+    // Passagem as chaves de sessão
+    node->beginABP(keys->dev_addr, nullptr, nullptr, (uint8_t*)keys->nwk_s_key, (uint8_t*)keys->app_s_key);
+    int16_t state = node->activateABP();
     
-    if (state == RADIOLIB_ERR_NONE) {
+    if (state != RADIOLIB_ERR_NONE) {
+        ESP_LOGE(TAG, "Falha ao alocar chaves ABP. Erro: %d", state);
+        return ESP_FAIL;
+    }
+
+    // Aplica a sessão na biblioteca
+    state = node->activateABP();
+    
+    // O código 2745 (0x0AB9) é o retorno padrão da RadioLib indicando que a sessão ABP está ativa
+    if (state == RADIOLIB_ERR_NONE || state == 2745) {
         ESP_LOGI(TAG, "Dispositivo ativado via ABP com sucesso.");
         return ESP_OK;
     } else {
