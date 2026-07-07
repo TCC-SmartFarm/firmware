@@ -30,4 +30,12 @@ void lora_payload_formatter(const struct sensor_data_t *data, uint8_t *payload_b
     uint16_t light = (uint16_t)(data->light_perc * 100.0f);
     payload_buffer[10] = (light >> 8) & 0xFF;
     payload_buffer[11] = light & 0xFF;
+
+    // Bateria (2 bytes - uint16_t)
+    uint16_t bat = (uint16_t)(data->battery * 100.0f);
+    payload_buffer[12] = (bat >> 8) & 0xFF;
+    payload_buffer[13] = bat & 0xFF;
+
+    // Validade dos dados (1 byte - bool)
+    payload_buffer[14] = data->is_valid ? 0x01 : 0x00;
 }

@@ -173,6 +173,7 @@ vTaskDelay(pdMS_TO_TICKS(1000)); // Aguarda estabilização da serial
                 data.air_hum = 60.0;
                 data.soil_hum = 45.0;
                 data.light_perc = 80.0;
+                data.battery = 100.0;
                 time(&data.timestamp);
                 data.is_valid = true;
             }

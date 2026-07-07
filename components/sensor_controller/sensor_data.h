@@ -15,6 +15,7 @@ typedef struct sensor_data_t {
     float air_hum;        // Humidade do Ar (%)
     float soil_hum;       // Humidade do Solo (%)
     float light_perc;     // Nível de Luminosidade (%)
+    float battery;        // Nível da Bateria (%)
     bool is_valid;        // Flag para indicar se as leituras contêm dados reais ou se falharam
 } sensor_data_t;
 

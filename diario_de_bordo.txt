@@ -304,7 +304,7 @@ armazenar o arquivo de headers <nome>.h usar:
     - Sensores analógicos são amostrados (NUM_LEITURAS) vezes e o valor final é a média das leituras pontuais.
 
 * Tratar o caso do SD estar cheio -> descartar o resgistro mais antigo para poder gravar o novo
-    - Aproximaçlão ineficente! Apagar uma linha só em um arquivo grande é ineficiente
+    - Aproximação ineficente! Apagar uma linha só em um arquivo grande é ineficiente
     - Estratégia: Segmentar logs em múltiplos arquivos. Quando todos encherem, deletar o mais antigo por completo.
 
     1 - Wake up ------------------ OK! 
@@ -493,6 +493,25 @@ e reutilizá-los em transmissões futuras.
 * Payload chega no Network Server no campo "frm_payload" codificada como string Hexadecimal
     - Para decodificar: Fatiar a string com base no numero de bytes enviado de cada campo e depois converter
     - Campos de formato float -> Transmitidos como inteiros multiplicados por 100 (2 bytes -> inteiro de 2 casas + 2 decimais)
+
+* Formato e codificação da Payload (em ordem):
+    - Timestamp ---------> 4 bytes - uint32_t (Big-Endian)
+    - Temperatura do Ar -> 2 bytes - int16_t * 100 (suporta negativos)
+    - Umidade do Ar -----> 2 bytes - uint16_t * 100
+    - Umidade do Solo ---> 2 bytes - uint16_t * 100
+    - Luminosidade ------> 2 bytes - uint16_t * 100
+    - Bateria -----------> 2 bytes - uint16_t * 100
+    - Validade ----------> 1 byte - bool
+
+    === Exemplo: 
+        - frm_payload = 0000008709f6177011941f40271001
+        - Timestamp ---------> 00 00 00 87 -> (int dec) 96
+        - Temperatura do Ar -> 09 f6 -------> (.2f dec) 2550 -- /100 --> 25.50 
+        - Umidade do Ar -----> 17 70 -------> (.2f dec) 6000 -- /100 --> 60.00
+        - Umidade do Solo ---> 11 94 -------> (.2f dec) 4500 -- /100 --> 45.00
+        - Luminosidade ------> 1f 40 -------> (.2f dec) 8000 -- /100 --> 80.00
+        - Bateria -----------> 27 10 -------> (.2f dec) 10000 - /100 --> 100.00
+        - Validade ----------> 00 01 -------> (int dec) 1
 
 =============================================================== /0/2026 ===============================================================
 
