@@ -461,7 +461,7 @@ e reutilizá-los em transmissões futuras.
     - Talvez ressoldar os pinos, colocando alguns para o lado da placa para ter mais espaço
 
 
-=============================================================== /0/2026 ===============================================================
+=============================================================== 06/07/2026 ===============================================================
 
 ----> To-Do's
     - Calibragem dos sensores!
@@ -473,6 +473,55 @@ e reutilizá-los em transmissões futuras.
 
 * Conflito no barramento SPI:
     - Cartão SD e mõdulo Lora Não funcionam concomitantemente...
+
+
+=============================================================== 07/07/2026 ===============================================================
+
+----> To-Do's
+    - Calibragem dos sensores!
+    - Ajuste de parâmetros para comunicação com o GW Lora ---> device_config/device_config.h e cli_controller/serial_cli.c
+        - Realmente necessário...?
+    - Verificação do timestamp em caso de perda de energia. Verificar Tempo atual x Tempo no NVS
+    - Comprar conversor de tensão Step-Up
+    - Conflito arramento SPI -> Cartão SD e SX1276
+
+* Sucesso no teste do módulo LoRa!
+    - Sub-Banda definida como Sub-Banda 1 a partir dos parâmetros no Gateway
+    - Gateway deve estar no modo semtech (portal de configuração web do próprio gateway)
+    - Notar -> Status de transmissão -7 não indica falha de transmissão, apenas o não recebimento do ACK do Gateway
+
+* Payload chega no Network Server no campo "frm_payload" codificada como string Hexadecimal
+    - Para decodificar: Fatiar a string com base no numero de bytes enviado de cada campo e depois converter
+    - Campos de formato float -> Transmitidos como inteiros multiplicados por 100 (2 bytes -> inteiro de 2 casas + 2 decimais)
+
+=============================================================== /0/2026 ===============================================================
+
+
+
+
+=============================================================== /0/2026 ===============================================================
+
+
+
+
+=============================================================== /0/2026 ===============================================================
+
+
+
+
+=============================================================== /0/2026 ===============================================================
+
+
+
+
+=============================================================== /0/2026 ===============================================================
+
+
+
+
+=============================================================== /0/2026 ===============================================================
+
+
 
 
 =============================================================== /0/2026 ===============================================================

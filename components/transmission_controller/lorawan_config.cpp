@@ -24,8 +24,8 @@ extern "C" esp_err_t lorawan_hardware_init(const lorawan_hal_config_t *hal_conf)
         // Instancia um objeto "Module" com os pinos especificados
         mod = new Module(hal, hal_conf->nss_pin, hal_conf->dio0_pin, hal_conf->rst_pin, hal_conf->dio1_pin);
         radio = new SX1276(mod);
-        // Frequencia de operação (915MHz) e Sub-Banda 2
-        node = new LoRaWANNode(radio, &AU915, 2); 
+        // Frequencia de operação (915MHz) e Sub-Banda 1
+        node = new LoRaWANNode(radio, &AU915, 1); 
     }
 
     // Inicialização do módulo
@@ -58,8 +58,12 @@ extern "C" esp_err_t lorawan_activate_abp(const lorawan_keys_t *keys) {
     node->beginABP(keys->dev_addr, nullptr, nullptr, (uint8_t*)keys->nwk_s_key, (uint8_t*)keys->app_s_key);
     int16_t state = node->activateABP();
     
-    if (state != RADIOLIB_ERR_NONE) {
-        ESP_LOGE(TAG, "Falha ao alocar chaves ABP. Erro: %d", state);
+    // Validação do estado 
+    if (state == RADIOLIB_LORAWAN_NEW_SESSION || state == RADIOLIB_LORAWAN_SESSION_RESTORED || state == RADIOLIB_ERR_NONE) {
+        ESP_LOGI(TAG, "Dispositivo ativado via ABP com sucesso. (Codigo de Estado: %d)", state);
+        return ESP_OK;
+    } else {
+        ESP_LOGE(TAG, "Falha na ativacao ABP. Erro RadioLib: %d", state);
         return ESP_FAIL;
     }
 

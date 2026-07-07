@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include "esp_err.h"
 
-// Movido da main.c para o header do controlador
+// Buffer de sessão LoraWAN
 #define LORAWAN_SESSION_BUF_SIZE 256
 
 #ifdef __cplusplus
@@ -27,9 +27,9 @@ typedef struct {
  * @brief Credenciais estáticas para ativação ABP -> Recomendado para prototipagem (Verificador de frame counter desabilitado no GW)
  */
 typedef struct {
-    uint32_t dev_addr;      // Device Address (4 bytes)
-    uint8_t nwk_s_key[16];  // Network Session Key (16 bytes)
-    uint8_t app_s_key[16];  // Application Session Key (16 bytes)
+    uint32_t dev_addr;      // 4 bytes numéricos
+    uint8_t nwk_s_key[16];  // 16 bytes puros 
+    uint8_t app_s_key[16];  // 16 bytes puros 
 } lorawan_keys_t;
 
 /**

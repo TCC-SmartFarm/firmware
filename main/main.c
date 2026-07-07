@@ -135,49 +135,56 @@ static void prepare_deep_sleep_and_shutdown(void);
 
 void app_main(void) {
 
-vTaskDelay(pdMS_TO_TICKS(1000)); // Aguarda estabilização do monitor serial
-    ESP_LOGI(TAG, "\n========== Iniciando Teste Isolado de Hardware LoRa ==========\n");
+vTaskDelay(pdMS_TO_TICKS(1000)); // Aguarda estabilização da serial
+    ESP_LOGI(TAG, "\n========== Iniciando Datalogger (Teste ABP/Transmissao) ==========\n");
 
-    // 1. Inicializa o barramento SPI
-    system_bus_init();
-
-    // 2. Preenche a estrutura de configuração do HAL
-    lorawan_hal_config_t lora_cfg = {
-        .spi_host_id = SPI_HOST_ID,
-        .nss_pin = PIN_NUM_CS_LORA,
-        .rst_pin = PIN_NUM_RST_LORA,
-        .dio0_pin = PIN_NUM_DIO0_LORA,
-        .dio1_pin = PIN_NUM_DIO1_LORA
-    };
-
-    // 3. Testa a inicialização e comunicação com o SX1276
-    if (lorawan_hardware_init(&lora_cfg) == ESP_OK) {
-        ESP_LOGI(TAG, "Comunicacao SPI com SX1276 estabelecida com sucesso!");
-    } else {
-        ESP_LOGE(TAG, "Falha na comunicacao com o modulo SX1276.");
-        ESP_LOGE(TAG, "Verifique o cabeamento, alimentacao e se os pinos correspondem.");
-        bus_spi_free(SPI_HOST_ID);
-        return; // Aborta o teste em caso de falha física
+    // Instancia NVS
+    if (device_config_init() != ESP_OK) {
+        ESP_LOGE(TAG, "Falha critica no NVS. Travando dispositivo.");
+        while(1) { vTaskDelay(pdMS_TO_TICKS(1000)); }
     }
 
-    // Mantém o rádio ligado por um breve período para observação
-    vTaskDelay(pdMS_TO_TICKS(2000)); 
+    user_config_t config = {0};
+    device_config_load(&config);
 
-    // 4. Testa o comando de Sleep do rádio
-    if (lorawan_node_sleep() == ESP_OK) {
-        ESP_LOGI(TAG, "SX1276 entrou em modo Sleep com sucesso.");
-    } else {
-        ESP_LOGE(TAG, "Falha ao enviar comando de Sleep para o SX1276.");
+    // Resolução do Wake Up
+    esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
+    bool force_configuration = false;
+
+    if (cause == ESP_SLEEP_WAKEUP_EXT0 || !config.is_configured) {
+        ESP_LOGI(TAG, "Condicao de configuracao detectada (Botao ou Falta de Credenciais).");
+        force_configuration = true;
     }
 
-    // 5. Tear Down e Deep Sleep do ESP32
-    ESP_LOGI(TAG, "Liberando recursos de hardware...");
-    lorawan_hardware_deinit(); // Limpa ponteiros do C++ (RadioLib/EspHal)
-    bus_spi_free(SPI_HOST_ID);
+    if (force_configuration) {
+        // Desvia para o fluxo de CLI e trava aqui até conclusão/reboot
+        execute_user_setup_cycle(); 
+    } else {
+        // Fluxo operacional normal
+        if (system_bus_init() == ESP_OK) {
+            
+            // Coleta de Dados
+            sensor_data_t data = execute_reading_cycle();
+            
+            //Dados dummy em caso de falha de leitura
+            if (!data.is_valid) {
+                ESP_LOGW(TAG, "Sensores falharam. Injetando dados DUMMY para testar transmissao LoRa.");
+                data.air_temp = 25.5;
+                data.air_hum = 60.0;
+                data.soil_hum = 45.0;
+                data.light_perc = 80.0;
+                time(&data.timestamp);
+                data.is_valid = true;
+            }
 
-    ESP_LOGI(TAG, "ESP32 entrando em Deep Sleep por 10 segundos para validar o ciclo...");
-    vTaskDelay(pdMS_TO_TICKS(100)); // Tempo para flush do log na UART
+            // Transmissão
+            execute_transmission_cycle(&data, &config);
+        } else {
+            ESP_LOGE(TAG, "Falha na inicializacao do hardware. Abortando ciclo operacional.");
+        }
+    }
 
+    // Encerramento
     prepare_deep_sleep_and_shutdown();
 }
 
@@ -432,9 +439,13 @@ static void execute_transmission_cycle(const sensor_data_t *data, const user_con
 
     // apeamento de Chaves ABP
     lorawan_keys_t keys = {0};
-    keys.dev_addr = config->dev_addr;
-    memcpy(keys.nwk_s_key, config->nwk_s_key, 16);
-    memcpy(keys.app_s_key, config->app_s_key, 16);
+    keys.dev_addr = (uint32_t)strtoul(config->dev_addr, NULL, 16);
+    // Converte as strings de 32 caracteres do NwkSKey e AppSKey para arrays de 16 bytes
+    for (int i = 0; i < 16; i++) {
+        // Escaneia 2 caracteres hex por vez (%2hhx) e salva no respectivo byte (uint8_t)
+        sscanf(&config->nwk_s_key[i * 2], "%2hhx", &keys.nwk_s_key[i]);
+        sscanf(&config->app_s_key[i * 2], "%2hhx", &keys.app_s_key[i]);
+    }
 
     // Ativação na Rede
     if (lorawan_activate_abp(&keys) != ESP_OK) {
