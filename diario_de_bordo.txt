@@ -505,33 +505,65 @@ e reutilizá-los em transmissões futuras.
 
     === Exemplo: 
         - frm_payload = 0000008709f6177011941f40271001
-        - Timestamp ---------> 00 00 00 87 -> (int dec) 96
+        - Timestamp ---------> 00 00 00 87 -> (int dec) 135
         - Temperatura do Ar -> 09 f6 -------> (.2f dec) 2550 -- /100 --> 25.50 
         - Umidade do Ar -----> 17 70 -------> (.2f dec) 6000 -- /100 --> 60.00
         - Umidade do Solo ---> 11 94 -------> (.2f dec) 4500 -- /100 --> 45.00
         - Luminosidade ------> 1f 40 -------> (.2f dec) 8000 -- /100 --> 80.00
         - Bateria -----------> 27 10 -------> (.2f dec) 10000 - /100 --> 100.00
-        - Validade ----------> 00 01 -------> (int dec) 1
-
-=============================================================== /0/2026 ===============================================================
-
-
-
-
-=============================================================== /0/2026 ===============================================================
-
+        - Validade ----------> 01 ----------> (int dec) 1
 
 
 
 =============================================================== /0/2026 ===============================================================
 
+----> To-Do's
+    - Calibragem dos sensores!
+    - Ajuste de parâmetros para comunicação com o GW Lora ---> device_config/device_config.h e cli_controller/serial_cli.c
+        - Realmente necessário...?
+    - Verificação do timestamp em caso de perda de energia. Verificar Tempo atual x Tempo no NVS
+    - Comprar conversor de tensão Step-Up
+    - Conflito arramento SPI -> Cartão SD e SX1276
 
+------------ NÃO TESTAR O MÓDULO SIM800L COM O ESP ALIMENTADO VIA USB!!!!!!!!!! -----------------------
+    - Este módulo puxa até 2A durante o funcionamento e opera entre 3,4V e 4,4V
+    - Alimentar externamente
+
+=============================================================== 13/07/2026 ===============================================================
+
+----> To-Do's
+    - Calibragem dos sensores!
+    - Verificação do timestamp em caso de perda de energia. Verificar Tempo atual x Tempo no NVS
+    - Conflito arramento SPI -> Cartão SD e SX1276
+    - Reconfigurar os pinos de acordo com o esquema elétrico!
+
+* Inicio do diagrama elétrico no EasyEDA
+
+* Adicionar um controller para realizar a leitura do nível de bateria
+    - Passa pelo ADS1115
+    - Divisor resistivo
+
+
+=============================================================== 22/07/2026 ===============================================================
+
+----> To-Do's
+    - Calibragem dos sensores!
+    - Verificação do timestamp em caso de perda de energia. Verificar Tempo atual x Tempo no NVS    
+    - Reconfigurar os pinos de acordo com o esquema elétrico!
+
+* Debug dos conflitos no barramento SPI ao utilizar o cartão SD e LoRa juntos
+    - Possível falha de fabricação no módlo de cartão SD -> Liso MISO curtada em GND, impedindo a liberação desta linha (MISO ativa em 0V)
+    - A linha MISO deveria estar condicionada ao CS. Como esta curtada com GND, não pode ser liberada. Apenas o SD fala no barramento.
 
 
 =============================================================== /0/2026 ===============================================================
 
+----> To-Do's
+    - Calibragem dos sensores!
+    - Verificação do timestamp em caso de perda de energia. Verificar Tempo atual x Tempo no NVS    
+    - Reconfigurar os pinos de acordo com o esquema elétrico!
 
-
+* Inicio da implementação do portal wifi para recebimento dos parametros de configuração via POST.
 
 =============================================================== /0/2026 ===============================================================
 

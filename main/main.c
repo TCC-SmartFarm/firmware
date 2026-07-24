@@ -39,7 +39,7 @@ static const char *TAG = "main";
 #define SLEEP_DURATION_MIN          0.2 // Tempo que o módulo deverá passar em deepsleep em minutos
 
 // Botão de Menu
-#define PIN_NUM_SETUP_BUTTON        33 
+#define PIN_NUM_SETUP_BUTTON        31 
 
 // Barramento I²C
 #define PIN_NUM_I2C_SCL             22
@@ -71,7 +71,7 @@ RTC_DATA_ATTR static uint32_t rtc_uplink_counter = 0;                           
 #define ADC_SAMPLE_DELAY_MS    20   // Delay entre as amostras
 
 // Cartão SD (SPI)
-#define PIN_NUM_SPI_CS_SD        5
+#define PIN_NUM_SPI_CS_SD        12
 #define MOUNT_POINT              "/sdcard"  // Ponto de montagem
 #define MAX_FILE_SIZE_BYTES 1024  // ------------------------------------ TESTE: 1 KB para forçar a rotação rápida
 #define MAX_LOG_FILES       5     // ------------------------------------ TESTE: 5 arquivos no máximo
@@ -83,7 +83,7 @@ RTC_DATA_ATTR static uint32_t rtc_uplink_counter = 0;                           
 #define PIN_NUM_CS_LORA             26      // Chip select (NSS) -> LoRa
 #define PIN_NUM_RST_LORA            25      // Pino para resetar o módulo
 #define PIN_NUM_DIO0_LORA           32 
-#define PIN_NUM_DIO1_LORA           27      
+#define PIN_NUM_DIO1_LORA           33      
 #define LORAWAN_SESSION_BUF_SIZE    256     // Tamanho do buffer (denifino em lorawan_config.h)
 #define NVS_BACKUP_INTERVAL         50      // Backup na Flash a cada 50 transmissões
 
@@ -147,6 +147,12 @@ vTaskDelay(pdMS_TO_TICKS(1000)); // Aguarda estabilização da serial
     user_config_t config = {0};
     device_config_load(&config);
 
+    gpio_set_direction((gpio_num_t)PIN_NUM_CS_LORA, GPIO_MODE_OUTPUT);
+    gpio_set_level((gpio_num_t)PIN_NUM_CS_LORA, 1);
+
+    gpio_set_direction(PIN_NUM_SPI_CS_SD, GPIO_MODE_OUTPUT);
+    gpio_set_level(PIN_NUM_SPI_CS_SD, 1);
+
     // Resolução do Wake Up
     esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
     bool force_configuration = false;
@@ -177,6 +183,9 @@ vTaskDelay(pdMS_TO_TICKS(1000)); // Aguarda estabilização da serial
                 time(&data.timestamp);
                 data.is_valid = true;
             }
+
+            // Armazenamento no SD
+            save_to_sd_card(&data);
 
             // Transmissão
             execute_transmission_cycle(&data, &config);
@@ -468,7 +477,7 @@ static void execute_transmission_cycle(const sensor_data_t *data, const user_con
 
     // Liberação dos recursos
     lorawan_node_sleep(); // Repouso do rádio
-    lorawan_hardware_deinit(); // Liberação de memória dos objetos C++
+
     
     ESP_LOGI(TAG, "Ciclo de transmissao encerrado.");
 }
@@ -476,9 +485,13 @@ static void execute_transmission_cycle(const sensor_data_t *data, const user_con
 static void prepare_deep_sleep_and_shutdown(void) {
     ESP_LOGI(TAG, "Iniciando Tear Down do sistema...");
 
+    // Liberação dos ecursos do rádio
+    lorawan_hardware_deinit(); // Liberação de memória dos objetos C++
+
     //Liberação dos barramentos
     bus_i2c_free(I2C_MASTER_NUM);
     bus_spi_free(SPI_HOST_ID);
+    
 
     // Definindo o despertador
     const uint64_t wakeup_time_sec = SLEEP_DURATION_MIN * 60; // Minutos para segundos
