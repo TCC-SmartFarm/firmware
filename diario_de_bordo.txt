@@ -556,7 +556,7 @@ e reutilizá-los em transmissões futuras.
     - A linha MISO deveria estar condicionada ao CS. Como esta curtada com GND, não pode ser liberada. Apenas o SD fala no barramento.
 
 
-=============================================================== /0/2026 ===============================================================
+=============================================================== 23/07/2026 ===============================================================
 
 ----> To-Do's
     - Calibragem dos sensores!
@@ -565,14 +565,55 @@ e reutilizá-los em transmissões futuras.
 
 * Inicio da implementação do portal wifi para recebimento dos parametros de configuração via POST.
 
-=============================================================== /0/2026 ===============================================================
+=============================================================== 27/07/2026 ===============================================================
+
+----> To-Do's
+    - Calibragem dos sensores!
+    - Verificação do timestamp em caso de perda de energia. Verificar Tempo atual x Tempo no NVS    
+    - Reconfigurar os pinos de acordo com o esquema elétrico! ----> Feito!
+
+* Teste da entrada de dados via portal WiFi - OK!
+    - IP de configuração (mesmo do DHCP): 192.168.4.1
+
+* Alterações para o portal WiFi
+    - Definir uma URL legível para humanos (? - Realmente necessário tendo em mente o App?)
+    - Enviar também o horário do sistema (do celular conectado) na payload
+    - Estudar mais a fundo a interação com o App (vai fixar IP? Precisa exibir o formulário? Fixar o nome da rede? O app se conecta sozinho?)
+
+* Problema do conflito no barramento SPI ---> Solução - Instanciar 2 barramentos, um para cada módulo
+    - Compartilhar os pinos de MOSI e CLK uma vez que não apresentam problemas
+    - Definir pinos de MISO e CS exclusivos para cada módulo
+    - No ESP32, apenas um host SPI pode estar ativo em um dado momento -> Multiplexar no tempo (fazer um, fechar, então fazer o outro)
+
+* Novo Fluxo de operação SPI:
+    1. Instanciar o barramento para o módulo de cartão SD 
+        - SPIHOST2
+        - CLK --> Pino 18
+        - MOSI -> Pino 23
+        - MISO -> Pino 19 (EXCLUSIVO - LINHA 'SEQUESTRADA')
+        - CS ---> Pino 12 (EXCLUSIVO - CS DO CARTAO SD)
+
+    2. Realizar a gravação
+    3. Liberar o barramento SPI (Garantir que não há nenhum dispositivo ligado no barramento antes!)
+    4. Instanciar novamente o barramento para o módulo LoRa
+        - SPIHOST2
+        - CLK --> Pino 18
+        - MOSI -> Pino 23
+        - MISO -> Pino 15 (EXCLUSIVO - MISO DO LoRa)
+        - CS ---> Pino 26 (EXCLUSIVO - CS DO LoRa)
+    5. Realizar a transmissão
+    6. Tear Down e deep sleep
 
 
 
+=============================================================== 28/08/2026 ===============================================================
 
-=============================================================== /0/2026 ===============================================================
+----> To-Do's
+    - Calibragem dos sensores!
+    - Verificação do timestamp em caso de perda de energia. Verificar Tempo atual x Tempo no NVS
+    - Limpeza dos códigos de teste e código morto
 
-
-
+* Refatoração das funções de orquestração do Cartão SD e LoRa
+    - Cada uma deve iniciar seu barramento SPI, fazer sua parte e então liberar o barramento
 
 =============================================================== /0/2026 ===============================================================

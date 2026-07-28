@@ -19,7 +19,7 @@ Arquivo contendo o loop principal de execução.
 #include "esp_sleep.h"
 #include "esp_attr.h"
 
-// Includes dos componetes
+// Includes dos componentes
 #include "bus.h"
 #include "sdcard.h"
 #include "air_sensor.h"
@@ -30,6 +30,7 @@ Arquivo contendo o loop principal de execução.
 #include "serial_cli.h"
 #include "lorawan_config.h"
 #include "payload_formatter.h"
+#include "wifi_portal.h"
 
 static const char *TAG = "main";
 
@@ -39,7 +40,7 @@ static const char *TAG = "main";
 #define SLEEP_DURATION_MIN          0.2 // Tempo que o módulo deverá passar em deepsleep em minutos
 
 // Botão de Menu
-#define PIN_NUM_SETUP_BUTTON        31 
+#define PIN_NUM_SETUP_BUTTON        35 
 
 // Barramento I²C
 #define PIN_NUM_I2C_SCL             22
@@ -47,45 +48,49 @@ static const char *TAG = "main";
 #define I2C_MASTER_NUM              I2C_NUM_0  // Interface I2C Zero do ESP32
 #define I2C_FREQ_HZ                 400000    // Alterar este valor para mudar o modo de operação (Fast Mode = 400kHZ)
 
-
-// Barramento SPI
+// Barramento SPI - Cartão SD
 #define SPI_HOST_ID              SPI2_HOST
-#define PIN_NUM_SPI_MISO         19
+#define PIN_NUM_SPI_MISO_SD      19
 #define PIN_NUM_SPI_MOSI         23
 #define PIN_NUM_SPI_CLK          18
 #define SPI_MAX_TRANSFER         4000
+
+// Cartão SD (SPI)
+#define PIN_NUM_SPI_CS_SD        12
+#define MOUNT_POINT              "/sdcard"  // Ponto de montagem
+#define MAX_FILE_SIZE_BYTES      1024       // ----------------- TESTE: 1 KB para forçar a rotação rápida
+#define MAX_LOG_FILES            5          // ----------------- TESTE: 5 arquivos no máximo
+
+// Barramento SPI - Módulo LoRa
+#define SPI_HOST_ID              SPI2_HOST
+#define PIN_NUM_SPI_MISO_LORA    15
+#define PIN_NUM_SPI_MOSI         23
+#define PIN_NUM_SPI_CLK          18
+#define SPI_MAX_TRANSFER         4000
+
+// Módulo Lora
+#define PIN_NUM_CS_LORA             26      // Chip select (NSS) -> LoRa
+#define PIN_NUM_RST_LORA            25      // Pino para resetar o módulo
+#define PIN_NUM_DIO0_LORA           32      // Controle de Tx e Rx
+#define PIN_NUM_DIO1_LORA           33      // Controle de Tx e Rx
+#define LORAWAN_SESSION_BUF_SIZE    256     // Tamanho do buffer (denifino em lorawan_config.h)
+#define NVS_BACKUP_INTERVAL         50      // Backup na Flash a cada 50 transmissões
 
 // Memória RTC
 RTC_DATA_ATTR static bool rtc_lora_session_valid = false;                       // Verificador da existencia de uma sessão (p/ cold boot i.e)
 RTC_DATA_ATTR static uint8_t rtc_lora_session_buffer[LORAWAN_SESSION_BUF_SIZE]; // Buffer para estado de sessão lora
 RTC_DATA_ATTR static uint32_t rtc_uplink_counter = 0;                           // Contador para backup
 
-
-
 // Conversor AD externo - ADS1115 (I²C)
 #define ADS1115_I2C_ADDRESS         0x48    // Endereço padrão (ADDR ligado em GND)
 #define ADS1115_CHANNEL_HIG         0       // Canal A0 -> Higrômetro
 #define ADS1115_CHANNEL_LDR         1       // Canal A1 -> LDR
-                                    // Amostragem
-#define NUM_READINGS            5   // Número de amostras de sensores analógicos
-#define ADC_SAMPLE_DELAY_MS    20   // Delay entre as amostras
-
-// Cartão SD (SPI)
-#define PIN_NUM_SPI_CS_SD        12
-#define MOUNT_POINT              "/sdcard"  // Ponto de montagem
-#define MAX_FILE_SIZE_BYTES 1024  // ------------------------------------ TESTE: 1 KB para forçar a rotação rápida
-#define MAX_LOG_FILES       5     // ------------------------------------ TESTE: 5 arquivos no máximo
+                                            // Amostragem:
+#define NUM_READINGS                5       //  Número de amostras de sensores analógicos
+#define ADC_SAMPLE_DELAY_MS         20      //  Delay entre as amostras
 
 // DHT
-#define PIN_NUM_SDA_DHT             13
-
-// Módulo Lora
-#define PIN_NUM_CS_LORA             26      // Chip select (NSS) -> LoRa
-#define PIN_NUM_RST_LORA            25      // Pino para resetar o módulo
-#define PIN_NUM_DIO0_LORA           32 
-#define PIN_NUM_DIO1_LORA           33      
-#define LORAWAN_SESSION_BUF_SIZE    256     // Tamanho do buffer (denifino em lorawan_config.h)
-#define NVS_BACKUP_INTERVAL         50      // Backup na Flash a cada 50 transmissões
+#define PIN_NUM_SDA_DHT             32
 
 
 
@@ -97,12 +102,12 @@ RTC_DATA_ATTR static uint32_t rtc_uplink_counter = 0;                           
 static void execute_user_setup_cycle(void);
 
 /**
- * @brief Inicializa a infraestrutura de barramentos (SPI e I2C) do sistema.
- * @return esp_err_t ESP_OK se todos os barramentos foram inicializados com sucesso.
- * Retorna o código de erro específico caso algum barramento falhe.
+ * @brief Inicializa a infraestrutura do barramentos I2C do sistema.
+ * @return esp_err_t ESP_OK se o barramento foi inicializado com sucesso.
+ * Retorna o código de erro específico caso o barramento falhe.
  */
 
-static esp_err_t system_bus_init(void);
+static esp_err_t i2c_init(void);
 
 /**
  * @brief Instancia os drivers dos sensores, efetua uma leitura e agrupa os resultados.
@@ -167,7 +172,7 @@ vTaskDelay(pdMS_TO_TICKS(1000)); // Aguarda estabilização da serial
         execute_user_setup_cycle(); 
     } else {
         // Fluxo operacional normal
-        if (system_bus_init() == ESP_OK) {
+        if (i2c_init() == ESP_OK) {
             
             // Coleta de Dados
             sensor_data_t data = execute_reading_cycle();
@@ -184,7 +189,7 @@ vTaskDelay(pdMS_TO_TICKS(1000)); // Aguarda estabilização da serial
                 data.is_valid = true;
             }
 
-            // Armazenamento no SD
+            // Armazenamento
             save_to_sd_card(&data);
 
             // Transmissão
@@ -203,36 +208,37 @@ vTaskDelay(pdMS_TO_TICKS(1000)); // Aguarda estabilização da serial
 
 static void execute_user_setup_cycle(void) {
     ESP_LOGI(TAG, "\n========== Iniciando Ciclo de Configuracao ==========\n");
-    ESP_LOGI(TAG, "Inicializando interface UART para teste de presenca...");
-    
     if (uart_cli_init() == ESP_OK) { 
         ESP_LOGI(TAG, "Aguardando 5 segundos por atividade na porta Serial...");
-        
-        bool serial_active = uart_cli_wait_for_user(5000); 
-
-        if (serial_active) {
-            ESP_LOGI(TAG, "Atividade detetada. Abrindo Menu de Configuracao.");
+        if (uart_cli_wait_for_user(5000)) {
+            ESP_LOGI(TAG, "Atividade detectada. Abrindo Menu de Configuracao.");
             uart_cli_run_menu(); 
         } else {
-            ESP_LOGW(TAG, "Timeout atingido sem atividade serial.");
-            ESP_LOGI(TAG, "[Simulacao] Iniciando Portal Wi-Fi AP... (Pulado para teste)");
+            ESP_LOGW(TAG, "Timeout serial atingido. Levantando Portal Wi-Fi.");
+            
+            // Inicia o Access Point e o Servidor Web
+            if (wifi_portal_start() == ESP_OK) {
+                ESP_LOGI(TAG, "Portal Web ativo. Conecte-se a rede e acesse o IP de configuracao.");
+                
+                // Trava a execução nesta task indefinidamente. 
+                // O encerramento deste ciclo se dará via hard reset (esp_restart) 
+                // acionado internamente pelo callback do POST HTTP.
+                while(1) {
+                    vTaskDelay(pdMS_TO_TICKS(1000));
+                }
+            } else {
+                ESP_LOGE(TAG, "Falha ao iniciar portal Wi-Fi. Reiniciando...");
+                vTaskDelay(pdMS_TO_TICKS(1000));
+                esp_restart();
+            }
         }
-    } else {
-        ESP_LOGE(TAG, "Erro ao inicializar o driver UART.");
     }
 }
 
-static esp_err_t system_bus_init(void) {
+static esp_err_t i2c_init(void) {
 
-    ESP_LOGI(TAG, "\n========== Inicializando Barramentos... ============\n");
+    ESP_LOGI(TAG, "\n========== Inicializando Barramento I²C... ============\n");
     esp_err_t ret;
-
-    // SPI
-    ret = bus_spi_init(SPI_HOST_ID, PIN_NUM_SPI_MOSI, PIN_NUM_SPI_MISO, PIN_NUM_SPI_CLK, SPI_MAX_TRANSFER);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Falha critica: Nao foi possivel inicializar o barramento SPI.");
-        return ret;
-    }
 
     // I2C
     ret = bus_i2c_init(I2C_MASTER_NUM, PIN_NUM_I2C_SDA, PIN_NUM_I2C_SCL, I2C_FREQ_HZ);
@@ -240,7 +246,7 @@ static esp_err_t system_bus_init(void) {
         ESP_LOGE(TAG, "Falha critica: Nao foi possivel inicializar o barramento I2C.");
         
         // Liberação do barramento em caso de falha
-        bus_spi_free(SPI_HOST_ID);
+        bus_i2c_free(I2C_MASTER_NUM);
         
         return ret;
     }
@@ -335,6 +341,17 @@ static sensor_data_t execute_reading_cycle(void) {
 }
 
 static void save_to_sd_card(const sensor_data_t *data) {
+
+    // Inicialização do barramento SPI para o cartão SD
+    ESP_LOGI(TAG, "\n========== Inicializando Barramento SPI (SD)... ============\n");
+    esp_err_t ret;
+
+    // SPI
+    ret = bus_spi_init(SPI_HOST_ID, PIN_NUM_SPI_MOSI, PIN_NUM_SPI_MISO_SD, PIN_NUM_SPI_CLK, SPI_MAX_TRANSFER);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Falha critica: Nao foi possivel inicializar o barramento SPI.");
+    }
+
     // Verifica se o dado é válido
     if (!data->is_valid) return;
 
@@ -347,7 +364,6 @@ static void save_to_sd_card(const sensor_data_t *data) {
     DIR *dir = opendir(MOUNT_POINT);
     if (!dir) {
         ESP_LOGE(TAG, "Falha ao abrir diretorio do SD.");
-        sdcard_unmount(MOUNT_POINT);
         return;
     }
 
@@ -416,12 +432,27 @@ static void save_to_sd_card(const sensor_data_t *data) {
         ESP_LOGI(TAG, "Dados gravados em: %s", current_file_path);
     }
 
-    // Desmontagem do sistema de arquivos
-    sdcard_unmount(MOUNT_POINT);
+    // Liberação dos recursos
+    sdcard_deinit(MOUNT_POINT);
+
+    // Liberação do Barramento SPI para o cartão SD
+    bus_spi_free(SPI_HOST_ID);
 }
 
 static void execute_transmission_cycle(const sensor_data_t *data, const user_config_t *config) {
+
+    // Inicialização do barramento SPI para o módulo LoRa
+    ESP_LOGI(TAG, "\n========== Inicializando Barramento SPI (LoRa)... ============\n");
+    esp_err_t ret;
+    
+    // SPI
+    ret = bus_spi_init(SPI_HOST_ID, PIN_NUM_SPI_MOSI, PIN_NUM_SPI_MISO_LORA, PIN_NUM_SPI_CLK, SPI_MAX_TRANSFER);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Falha critica: Nao foi possivel inicializar o barramento SPI.");
+    }
+
     ESP_LOGI(TAG, "\n========== Iniciando Transmissao LoRaWAN ==========\n");
+
 
     // Validação de dados e configuração
     if (!data->is_valid) {
@@ -447,7 +478,7 @@ static void execute_transmission_cycle(const sensor_data_t *data, const user_con
         return;
     }
 
-    // apeamento de Chaves ABP
+    // Mapeamento de Chaves ABP
     lorawan_keys_t keys = {0};
     keys.dev_addr = (uint32_t)strtoul(config->dev_addr, NULL, 16);
     // Converte as strings de 32 caracteres do NwkSKey e AppSKey para arrays de 16 bytes
@@ -478,6 +509,11 @@ static void execute_transmission_cycle(const sensor_data_t *data, const user_con
     // Liberação dos recursos
     lorawan_node_sleep(); // Repouso do rádio
 
+    // Desacoplamento para liberação do barramento
+    lorawan_hardware_deinit();
+
+    // Liberação do barramento SPI para o módulo LoRa
+    bus_spi_free(SPI_HOST_ID);
     
     ESP_LOGI(TAG, "Ciclo de transmissao encerrado.");
 }
@@ -485,12 +521,8 @@ static void execute_transmission_cycle(const sensor_data_t *data, const user_con
 static void prepare_deep_sleep_and_shutdown(void) {
     ESP_LOGI(TAG, "Iniciando Tear Down do sistema...");
 
-    // Liberação dos ecursos do rádio
-    lorawan_hardware_deinit(); // Liberação de memória dos objetos C++
-
-    //Liberação dos barramentos
+    //Liberação do barramento I2C
     bus_i2c_free(I2C_MASTER_NUM);
-    bus_spi_free(SPI_HOST_ID);
     
 
     // Definindo o despertador
@@ -502,7 +534,7 @@ static void prepare_deep_sleep_and_shutdown(void) {
     esp_sleep_enable_ext0_wakeup(PIN_NUM_SETUP_BUTTON, 1); 
 
 
-    ESP_LOGI(TAG, "Dromindo...");
+    ESP_LOGI(TAG, "Dormindo...");
     
     // Delay para registro da mensagem
     vTaskDelay(pdMS_TO_TICKS(100)); 

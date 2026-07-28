@@ -41,7 +41,15 @@ extern "C" esp_err_t lorawan_hardware_init(const lorawan_hal_config_t *hal_conf)
 
 extern "C" void lorawan_hardware_deinit(void) {
     // Liberação dos recursos
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdelete-non-virtual-dtor"
+
+    if (node) { delete node; node = nullptr; }
+    if (radio) { delete radio; radio = nullptr; }
     if (mod) { delete mod; mod = nullptr; }
+
+#pragma GCC diagnostic pop
+
     if (hal) { delete hal; hal = nullptr; }
     ESP_LOGI(TAG, "Recursos de hardware do LoRaWAN liberados.");
 }

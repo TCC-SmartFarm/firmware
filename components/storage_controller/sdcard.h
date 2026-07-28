@@ -51,6 +51,12 @@ esp_err_t sdcard_read_chunk(const char* file_path, size_t offset, char* buffer, 
 esp_err_t sdcard_unmount(const char* mount_point);
 
 /**
+ * @brief Desmonta o sistema de arquivos FatFs e desacopla o cartão SD do barramento SPI.
+ * * @param mount_point Caminho de montagem definido em sdcard_config.
+ */
+void sdcard_deinit(const char* mount_point);
+
+/**
  * @brief Calcula o espaço livre disponível no cartão SD.
  * @return uint64_t Espaço livre em Kilobytes (KB). Retorna 0 em caso de falha.
  */

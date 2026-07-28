@@ -18,8 +18,7 @@ a partir da funções providas pelo driver.
 
 // Definição de constantes
 static const char *TAG = "sdcard";
-static sdmmc_card_t *card; 
-
+static sdmmc_card_t *sd_card_handle; 
 
 esp_err_t sdcard_config(spi_host_device_t host_id, int cs_pin, const char* mount_point) {
     esp_err_t ret;
@@ -46,7 +45,7 @@ esp_err_t sdcard_config(spi_host_device_t host_id, int cs_pin, const char* mount
     slot_config.host_id = host_id;
 
     // Montagem no sistema de arquivo virtual do ESP 
-    ret = esp_vfs_fat_sdspi_mount(mount_point, &host, &slot_config, &mount_config, &card);
+    ret = esp_vfs_fat_sdspi_mount(mount_point, &host, &slot_config, &mount_config, &sd_card_handle);
 
     if (ret != ESP_OK) {
         if (ret == ESP_FAIL) {
@@ -91,7 +90,6 @@ esp_err_t sdcard_write(const char* file_path, const char* data) {
     return ESP_OK;
 }
 
-
 esp_err_t sdcard_read_chunk(const char* file_path, size_t offset, char* buffer, size_t buffer_size, size_t* bytes_read) {
     if (file_path == NULL || buffer == NULL || bytes_read == NULL || buffer_size == 0) {
         ESP_LOGE(TAG, "Argumentos inválidos para leitura.");
@@ -118,6 +116,7 @@ esp_err_t sdcard_read_chunk(const char* file_path, size_t offset, char* buffer, 
     return ESP_OK;
 }
 
+/*
 esp_err_t sdcard_unmount(const char* mount_point) {
     if (mount_point == NULL) {
         ESP_LOGE(TAG, "Ponto de montagem inválido.");
@@ -136,6 +135,39 @@ esp_err_t sdcard_unmount(const char* mount_point) {
 
     ESP_LOGI(TAG, "Cartão SD desmontado com sucesso do ponto: %s", mount_point);
     return ESP_OK;
+}
+*/
+
+void sdcard_deinit(const char* mount_point){
+
+    ESP_LOGI(TAG, "=== Iniciando a liberação de recursos do Cartão SD ===");
+
+    if (sd_card_handle != NULL) {
+
+        int spi_device_handle = sd_card_handle->host.slot;
+
+        // Desmontagem do sistema de arquivos
+        esp_err_t err = esp_vfs_fat_sdcard_unmount(mount_point, sd_card_handle);
+        if (err != ESP_OK) {
+            ESP_LOGW(TAG, "Falha ao desmontar FAT: %s", esp_err_to_name(err));
+        } else {
+            ESP_LOGI(TAG, "Sistema FAT desmontado com sucesso.");
+        }
+
+        // Liberação do barramento
+        err = sdspi_host_remove_device(spi_device_handle);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Falha ao desvincular SD do SPI: %s", esp_err_to_name(err));
+        } else {
+            ESP_LOGI(TAG, "Dispositivo SD desvinculado do barramento.");
+        }
+
+        //Limpeza do ponteiro
+        sd_card_handle = NULL;
+        
+    }
+
+    ESP_LOGI(TAG, "Cartão SD desmontado com sucesso do ponto: %s", mount_point);
 }
 
 uint64_t sdcard_get_free_space_kb(void) {
