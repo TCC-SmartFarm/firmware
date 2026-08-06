@@ -604,9 +604,7 @@ e reutilizá-los em transmissões futuras.
     5. Realizar a transmissão
     6. Tear Down e deep sleep
 
-
-
-=============================================================== 28/08/2026 ===============================================================
+=============================================================== 28/07/2026 ===============================================================
 
 ----> To-Do's
     - Calibragem dos sensores!
@@ -616,4 +614,18 @@ e reutilizá-los em transmissões futuras.
 * Refatoração das funções de orquestração do Cartão SD e LoRa
     - Cada uma deve iniciar seu barramento SPI, fazer sua parte e então liberar o barramento
 
-=============================================================== /0/2026 ===============================================================
+* Ajustes na PCB
+    - Rompimento da trilha de SDA do DHT (então roteada para um pino de input only)
+    - Rompimento da trilha de MISO do LoRa devido a conflitos no barramento SPI
+    - Reconxão com jumpers para os pinos corretos do ESP
+
+=============================================================== 06/08/2026 ===============================================================
+
+----> To-Do's
+    - Calibragem dos sensores!
+    - Verificação do timestamp em caso de perda de energia. Verificar Tempo atual x Tempo no NVS
+    - Limpeza dos códigos de teste e código morto
+
+* Adição de uma rota extra no portal WiFi para configuração silenciosa via aplicativo mobile
+
+* Adição de uma resolução de DNS para o endereço de IP de configuração 

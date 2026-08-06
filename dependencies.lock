@@ -54,7 +54,7 @@ dependencies:
       type: service
     version: 1.1.4
   espp/base_component:
-    component_hash: 2385ba0096f7a12affef3f4c934fabc9a433fd20b69c9b03cfd5ea50195633db
+    component_hash: 13da66b6bac5cbee10d3dd98411fc40c4f380c88116ec024942f719da1534b47
     dependencies:
     - name: espp/logger
       registry_url: https://components.espressif.com
@@ -66,9 +66,9 @@ dependencies:
     source:
       registry_url: https://components.espressif.com
       type: service
-    version: 1.1.4
+    version: 1.1.7
   espp/base_peripheral:
-    component_hash: af57d6158b62ffd6cb1294aa5b2c88be714360b7a2b96a223c1377e45c629433
+    component_hash: c2e57b0b29ed1d7c8670825c60c70857b9f6ed5d5e897c6a74579b21b561f555
     dependencies:
     - name: espp/base_component
       registry_url: https://components.espressif.com
@@ -80,9 +80,9 @@ dependencies:
     source:
       registry_url: https://components.espressif.com
       type: service
-    version: 1.1.4
+    version: 1.1.7
   espp/format:
-    component_hash: 345ec7e663bb12db94448d9916e64daf7f562694bc9d66553d99c2ebafeca12d
+    component_hash: c813575759e4c8b319add49af53b6e37bdf627dd02e6941a045f079a8c4d78e9
     dependencies:
     - name: idf
       require: private
@@ -90,9 +90,9 @@ dependencies:
     source:
       registry_url: https://components.espressif.com
       type: service
-    version: 1.1.4
+    version: 1.1.7
   espp/logger:
-    component_hash: de1cfab29f985c5774c5da8f74b938fc016e71b21609a459bc757835c94e4709
+    component_hash: 1e6c49a8c6e369c741d5dc5cc4dcbc294513af844929a3b3702c5beb0eb08081
     dependencies:
     - name: espp/format
       registry_url: https://components.espressif.com
@@ -104,7 +104,17 @@ dependencies:
     source:
       registry_url: https://components.espressif.com
       type: service
-    version: 1.1.4
+    version: 1.1.7
+  espressif/mdns:
+    component_hash: e81ca7a7f53ea34e78274df054da692c272e1315572876b237b1748e267c013b
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.11.3
   idf:
     source:
       type: idf
@@ -122,8 +132,9 @@ dependencies:
 direct_dependencies:
 - esp-idf-lib/dht
 - espp/ads1x15
+- espressif/mdns
 - idf
 - jgromes/radiolib
-manifest_hash: 98014f88b55bef8ae2e86ca8feb02d2a5f1cf868f8f0919c5a5d5302aa1a4f16
+manifest_hash: a839c2781a2ce170ead900f3ff4b5bbbe571b33a573bfc3dd3c5d987de916a4d
 target: esp32
 version: 2.0.0

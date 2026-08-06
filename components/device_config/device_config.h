@@ -23,7 +23,7 @@ typedef struct __attribute__((packed)) {
     uint32_t setup_date; 
     bool is_configured;  // Flag de controle
 
-    // Parametros LoRa - ABP (Strings Hexadecimais extraídas do CLI)
+    // Parametros LoRa - ABP (Strings Hexadecimais extraídas do menu de configuração)
     char dev_addr[9];   // 8 caracteres hex + terminador nulo
     char nwk_s_key[33]; // 32 caracteres hex + terminador nulo
     char app_s_key[33]; // 32 caracteres hex + terminador nulo
