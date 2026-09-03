@@ -629,3 +629,13 @@ e reutilizá-los em transmissões futuras.
 * Adição de uma rota extra no portal WiFi para configuração silenciosa via aplicativo mobile
 
 * Adição de uma resolução de DNS para o endereço de IP de configuração 
+
+=============================================================== 03/09/2026 ===============================================================
+
+----> To-Do's
+    - Calibragem dos sensores!
+    - Verificação do timestamp em caso de perda de energia. Verificar Tempo atual x Tempo no NVS
+    - Limpeza dos códigos de teste e código morto
+    - Adicionar entradas para os demais parametros de configuração no portal wifi
+
+* Impressão da PCB Ok! Testes com alimentação via USB ok, testando com a bateria
