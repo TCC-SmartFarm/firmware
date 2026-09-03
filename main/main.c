@@ -56,7 +56,7 @@ static const char *TAG = "main";
 #define SPI_MAX_TRANSFER         4000
 
 // Cartão SD (SPI)
-#define PIN_NUM_SPI_CS_SD        12
+#define PIN_NUM_SPI_CS_SD        5
 #define MOUNT_POINT              "/sdcard"  // Ponto de montagem
 #define MAX_FILE_SIZE_BYTES      1024       // ----------------- TESTE: 1 KB para forçar a rotação rápida
 #define MAX_LOG_FILES            5          // ----------------- TESTE: 5 arquivos no máximo
@@ -69,10 +69,10 @@ static const char *TAG = "main";
 #define SPI_MAX_TRANSFER         4000
 
 // Módulo Lora
-#define PIN_NUM_CS_LORA             26      // Chip select (NSS) -> LoRa
-#define PIN_NUM_RST_LORA            25      // Pino para resetar o módulo
-#define PIN_NUM_DIO0_LORA           32      // Controle de Tx e Rx
-#define PIN_NUM_DIO1_LORA           33      // Controle de Tx e Rx
+#define PIN_NUM_CS_LORA             4      // Chip select (NSS) -> LoRa
+#define PIN_NUM_RST_LORA            2      // Pino para resetar o módulo
+#define PIN_NUM_DIO0_LORA           16      // Controle de Tx e Rx
+#define PIN_NUM_DIO1_LORA           17      // Controle de Tx e Rx
 #define LORAWAN_SESSION_BUF_SIZE    256     // Tamanho do buffer (denifino em lorawan_config.h)
 #define NVS_BACKUP_INTERVAL         50      // Backup na Flash a cada 50 transmissões
 
@@ -544,6 +544,3 @@ static void prepare_deep_sleep_and_shutdown(void) {
 }
 
 /* --------------------------------- Funções Auxiliares ----------------------------------------*/
-
-
-
