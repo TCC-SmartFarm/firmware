@@ -162,7 +162,7 @@ vTaskDelay(pdMS_TO_TICKS(1000)); // Aguarda estabilização da serial
 
     // Resolução do Wake Up
     esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
-    bool force_configuration = false;
+    bool force_configuration = true;
 
     if (cause == ESP_SLEEP_WAKEUP_EXT0 || !config.is_configured) {
         ESP_LOGI(TAG, "Condicao de configuracao detectada (Botao ou Falta de Credenciais).");

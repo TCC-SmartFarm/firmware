@@ -8,6 +8,8 @@ Arquivo destinado a instanciação do portal Wi-Fi para configuração.
 
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_mac.h"
@@ -68,7 +70,7 @@ static const char *html_form =
                 "font-size: 14px;"
                 "font-weight: bold;"
             "}"
-            "input[type=\"text\"] {"
+            "input[type=\"text\"], input[type=\"datetime-local\"] {"
                 "width: 100%;"
                 "padding: 12px;"
                 "margin-bottom: 20px;"
@@ -104,6 +106,8 @@ static const char *html_form =
                 "<input type=\"text\" name=\"nwk_s_key\" maxlength=\"32\">"
                 "<label>AppSKey (32 hex):</label>"
                 "<input type=\"text\" name=\"app_s_key\" maxlength=\"32\">"
+                "<label>Data e Hora:</label>"
+                "<input type=\"datetime-local\" name=\"setup_date\">"
                 "<input type=\"submit\" value=\"Salvar e Reiniciar\">"
             "</form>"
         "</div>"
@@ -154,6 +158,10 @@ static esp_err_t submit_post_handler(httpd_req_t *req) {
         strncpy(config.app_s_key, param, sizeof(config.app_s_key));
     }
 
+if (httpd_query_key_value(buf, "setup_date", param, sizeof(param)) == ESP_OK) {
+        config.setup_date = parse_datetime_to_epoch(param);
+    }
+
     config.is_configured = true;
 
     // Salva na NVS
@@ -170,6 +178,28 @@ static esp_err_t submit_post_handler(httpd_req_t *req) {
     }
 
     return ESP_OK;
+}
+
+// Parser de Data ppara Epoch
+static uint32_t parse_datetime_to_epoch(const char *datetime_str) {
+    struct tm tm_info = {0};
+    
+    // Tenta o formato padrão com espaço (esperado do App Mobile)
+    if (strptime(datetime_str, "%Y-%m-%d %H:%M", &tm_info) == NULL) {
+        // Tenta o formato ISO 8601 com 'T' (nativo do HTML5)
+        if (strptime(datetime_str, "%Y-%m-%dT%H:%M", &tm_info) == NULL) {
+            // Tenta o formato URL-encoded caso o servidor HTTP não tenha decodificado
+            if (strptime(datetime_str, "%Y-%m-%dT%H%%3A%M", &tm_info) == NULL) {
+                ESP_LOGE(TAG, "Falha ao converter a data: %s", datetime_str);
+                return 0; 
+            }
+        }
+    }
+    
+    // Converte a estrutura tm para uint32_t (segundos desde 1970).
+    // mktime utiliza o fuso horário (timezone) local configurado no ESP32. 
+    // Se a data recebida for obrigatoriamente UTC, defina a variável de ambiente TZ antes.
+    return (uint32_t)mktime(&tm_info);
 }
 
 // POST Handler Aplicativo -> Recepção do JSON e parsing
@@ -218,6 +248,11 @@ static esp_err_t api_post_handler(httpd_req_t *req) {
     cJSON *app_s_key = cJSON_GetObjectItem(root, "app_s_key");
     if (cJSON_IsString(app_s_key) && (app_s_key->valuestring != NULL)) {
         strncpy(config.app_s_key, app_s_key->valuestring, sizeof(config.app_s_key));
+    }
+
+    cJSON *setup_date = cJSON_GetObjectItem(root, "setup_date");
+    if (cJSON_IsNumber(setup_date)) {
+        config.setup_date = (uint32_t)setup_date->valuedouble;
     }
 
     config.is_configured = true;

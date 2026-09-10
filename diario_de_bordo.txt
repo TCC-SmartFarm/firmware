@@ -657,3 +657,13 @@ e reutilizá-los em transmissões futuras.
 * Alteração da função execute_reading_cycle para também ler o nível de bateria
 
 =============================================================== 10/09/2026 ===============================================================
+
+----> To-Do's
+    - Calibragem dos sensores!
+    - Verificação do timestamp em caso de perda de energia. Verificar Tempo atual x Tempo no NVS
+    - Limpeza dos códigos de teste e código morto
+    - Adicionar entradas para os demais parametros de configuração no portal wifi
+
+* Correção do menu CLI para retirar variaveis n utilizadas (nome do device e senha)
+
+* Correção do menu online e API par aincluir o campo de data

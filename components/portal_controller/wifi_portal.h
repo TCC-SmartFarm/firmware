@@ -25,4 +25,11 @@ esp_err_t wifi_portal_start(void);
 void wifi_portal_stop(void);
 
 
+/**
+ * @brief Converte a string de data recebida do portal para Epoch
+ * 
+ */
+static uint32_t parse_datetime_to_epoch(const char *datetime_str);
+
+
 #endif // WIFI_PORTAL_H
