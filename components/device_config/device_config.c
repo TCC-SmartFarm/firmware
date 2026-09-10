@@ -5,6 +5,9 @@ Arquivo destinado a realizar a configuração do Non-Volatile-Storage do ESP a f
 */
 
 // Includes
+#include <sys/time.h>
+#include <time.h>
+
 #include "device_config.h"
 #include "nvs_flash.h"
 #include "nvs.h"
@@ -57,6 +60,15 @@ esp_err_t device_config_save(const user_config_t *config) {
 
     if (err == ESP_OK) {
         ESP_LOGI(TAG, "Configurações salvas no NVS.");
+
+        // Ajuste do relógio interno
+        struct timeval tv = {
+            .tv_sec = config->setup_date, 
+            .tv_usec = 0
+        };
+        
+        settimeofday(&tv, NULL);
+        ESP_LOGI(TAG, "Relógio do sistema sincronizado (Timestamp: %lld).", (long long)config->setup_date);
     }
 
     return err;

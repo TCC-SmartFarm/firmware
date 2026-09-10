@@ -17,10 +17,7 @@ Arquivo contendo os headers das funções implementadas no arquivo device_config
  * packed -> Evita padding durante a gravação na memória. 
  */
 typedef struct __attribute__((packed)) {
-    char device_name[32];
-    char password[64];
-
-    uint32_t setup_date; 
+    uint32_t setup_date; // Data de referência
     bool is_configured;  // Flag de controle
 
     // Parametros LoRa - ABP (Strings Hexadecimais extraídas do menu de configuração)

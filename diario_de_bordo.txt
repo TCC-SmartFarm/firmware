@@ -639,3 +639,21 @@ e reutilizá-los em transmissões futuras.
     - Adicionar entradas para os demais parametros de configuração no portal wifi
 
 * Impressão da PCB Ok! Testes com alimentação via USB ok, testando com a bateria
+    - Estava com mal contato no capacitor de estabilização do conversor de tensão
+
+ * Teste com bateria OK!
+
+=============================================================== 03/09/2026 ===============================================================
+
+----> To-Do's
+    - Calibragem dos sensores!
+    - Verificação do timestamp em caso de perda de energia. Verificar Tempo atual x Tempo no NVS
+    - Limpeza dos códigos de teste e código morto
+    - Adicionar entradas para os demais parametros de configuração no portal wifi
+
+* Alteração da função device_config_save (device_config/device_config.c) para usar a função settimeofday (define a referencia de data)
+    - A data é redefinida apenas a cada ciclo de configuração
+
+* Alteração da função execute_reading_cycle para também ler o nível de bateria
+
+=============================================================== 10/09/2026 ===============================================================

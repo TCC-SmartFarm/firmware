@@ -8,7 +8,7 @@ Header compartilhado para armazenar a struct de leitura dos sensores. Utilizada 
 #include <time.h>
 #include <stdbool.h>
 
-// Struct nomeada para permitir forward declaration em outros arquivos
+// Struct nomeada para permitir interação por outros arquivos
 typedef struct sensor_data_t {
     time_t timestamp;     // Unix Epoch
     float air_temp;       // Temperatura do Ar (°C)

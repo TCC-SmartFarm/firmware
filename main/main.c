@@ -25,6 +25,7 @@ Arquivo contendo o loop principal de execução.
 #include "air_sensor.h"
 #include "soil_sensor.h"
 #include "light_sensor.h"
+#include "battery_level.h"
 #include "sensor_data.h"
 #include "device_config.h"
 #include "serial_cli.h"
@@ -85,6 +86,7 @@ RTC_DATA_ATTR static uint32_t rtc_uplink_counter = 0;                           
 #define ADS1115_I2C_ADDRESS         0x48    // Endereço padrão (ADDR ligado em GND)
 #define ADS1115_CHANNEL_HIG         0       // Canal A0 -> Higrômetro
 #define ADS1115_CHANNEL_LDR         1       // Canal A1 -> LDR
+#define ADS1115_CHANNEL_BAT         2       // Canal A2 -> Bateria
                                             // Amostragem:
 #define NUM_READINGS                5       //  Número de amostras de sensores analógicos
 #define ADC_SAMPLE_DELAY_MS         20      //  Delay entre as amostras
@@ -190,7 +192,7 @@ vTaskDelay(pdMS_TO_TICKS(1000)); // Aguarda estabilização da serial
             }
 
             // Armazenamento
-            save_to_sd_card(&data);
+            //save_to_sd_card(&data);
 
             // Transmissão
             execute_transmission_cycle(&data, &config);
@@ -268,9 +270,10 @@ static sensor_data_t execute_reading_cycle(void) {
     esp_err_t ret_air = air_sensor_init(PIN_NUM_SDA_DHT);
     esp_err_t ret_soil = soil_sensor_init_ads1115(I2C_MASTER_NUM, ADS1115_I2C_ADDRESS, ADS1115_CHANNEL_HIG);
     esp_err_t ret_ldr = light_sensor_init(I2C_MASTER_NUM, ADS1115_I2C_ADDRESS, ADS1115_CHANNEL_LDR);
+    esp_err_t ret_bat = battery_level_init(I2C_MASTER_NUM, ADS1115_I2C_ADDRESS, ADS1115_CHANNEL_BAT);
 
     // Verificação da inicialização
-    if (ret_air != ESP_OK || ret_soil != ESP_OK || ret_ldr != ESP_OK) {
+    if (ret_air != ESP_OK || ret_soil != ESP_OK || ret_ldr != ESP_OK || ret_bat != ESP_OK) {
         ESP_LOGE(TAG, "Falha ao instanciar os drivers dos sensores. Abortando leitura.");
         return data; // is_valid = false
     }
@@ -292,13 +295,16 @@ static sensor_data_t execute_reading_cycle(void) {
     // Acumuladores para as leituras analógicas
     float acc_soil_hum = 0;
     float acc_light_perc = 0;
+    float acc_bat_perc = 0;
     int valid_soil_samples = 0;
     int valid_ldr_samples = 0;
+    int valid_bat_samples = 0;
 
     ESP_LOGI(TAG, "Coletando amostras dos sensores analógicos...");
     for (int i = 0; i < NUM_READINGS; i++) {
         float sample_soil = 0;
         float sample_light = 0;
+        float sample_bat = 0;
 
         if (soil_sensor_read_ads1115(&sample_soil) == ESP_OK) {
             acc_soil_hum += sample_soil;
@@ -310,6 +316,11 @@ static sensor_data_t execute_reading_cycle(void) {
             valid_ldr_samples++;
         }
 
+        if (battery_level_read(&sample_bat) == ESP_OK) {
+            acc_bat_perc += sample_bat;
+            valid_bat_samples++;
+        }        
+
         // Pequeno atraso para o ADC processar a próxima conversão e filtrar ruído AC
         if (i < NUM_READINGS - 1) {
             vTaskDelay(pdMS_TO_TICKS(ADC_SAMPLE_DELAY_MS));
@@ -319,20 +330,22 @@ static sensor_data_t execute_reading_cycle(void) {
     // Validação e calculo das médias
     if (ret_air == ESP_OK && valid_soil_samples > 0 && valid_ldr_samples > 0) {
         
+        // DHT
         data.air_temp = air_temp_val;
         data.air_hum = air_hum_val;
         
-        // Cálculo da média aritmética
+        // Sensores analógicos
         data.soil_hum = acc_soil_hum / valid_soil_samples;
         data.light_perc = acc_light_perc / valid_ldr_samples;
+        data.battery = acc_bat_perc / valid_bat_samples;
         
         data.is_valid = true; 
 
         ESP_LOGI(TAG, "Ciclo concluido com sucesso! (Medias calculadas com base em %d/%d amostras)", 
                  valid_soil_samples, NUM_READINGS);
                  
-        ESP_LOGI(TAG, "Timestamp - %lld | Valores -> Ar: %.1fC / %.1f%% | Solo: %.1f%% | Luz: %.1f%%", 
-                 (long long)data.timestamp, data.air_temp, data.air_hum, data.soil_hum, data.light_perc);
+        ESP_LOGI(TAG, "Timestamp - %lld | Valores -> Ar: %.1fC / %.1f%% | Solo: %.1f%% | Luz: %.1f%% | Bateria: %.1f%%", 
+                 (long long)data.timestamp, data.air_temp, data.air_hum, data.soil_hum, data.light_perc, data.battery);
     } else {
         ESP_LOGE(TAG, "Falha critica: Amostras insuficientes para gerar a media dos sensores.");
     }

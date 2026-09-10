@@ -40,12 +40,10 @@ static void print_main_menu(void) {
     printf("\n-+H+-+H+-+H+-+H+-+H+-+H+-+H+-+H+-+H+-\n");
     printf("        MENU DE CONFIGURACAO      \n");
     printf("-+H+-+H+-+H+-+H+-+H+-+H+-+H+-+H+-+H+-\n \n");
-    printf("[1] Nome do Dispositivo : %s\n", temp_config.device_name[0] ? temp_config.device_name : "(vazio)");
-    printf("[2] Dev Address         : %s\n", temp_config.dev_addr[0] ? temp_config.dev_addr : "(vazio)");
-    printf("[3] NW Session Key      : %s\n", temp_config.nwk_s_key[0] ? temp_config.nwk_s_key : "(vazio)");
-    printf("[4] App Session Key     : %s\n", temp_config.app_s_key[0] ? temp_config.app_s_key : "(vazio)");
-    printf("[5] Senha               : %s\n", temp_config.password[0] ? temp_config.password : "(vazio)");
-    printf("[6] Data e Hora Atual   : %lu\n",temp_config.setup_date);
+    printf("[1] DevEUI                   : %s\n", temp_config.dev_addr[0] ? temp_config.dev_addr : "(vazio)");
+    printf("[2] Network Session Key      : %s\n", temp_config.nwk_s_key[0] ? temp_config.nwk_s_key : "(vazio)");
+    printf("[3] Application Session Key  : %s\n", temp_config.app_s_key[0] ? temp_config.app_s_key : "(vazio)");
+    printf("[4] Data e Hora Atual        : %lu\n",temp_config.setup_date);
     printf("[7] Apagar Configuracoes da Memoria (Reset NVS)\n");
     printf("[8] Ver Configuracoes Atuais \n");
     printf("[9] Salvar e Sair\n");
@@ -63,12 +61,10 @@ static void print_current_flash_config(void) {
     // Exibe no terminal
     if (device_config_load(&flash_cfg) == ESP_OK) {
         printf("\n-+H+- DADOS GRAVADOS NA MEMORIA -+H+-\n");
-        printf("Nome do Dispositivo : %s\n", flash_cfg.device_name);
-        printf("DevEUI              : %s\n", flash_cfg.dev_addr);
-        printf("JoinEUI             : %s\n", flash_cfg.nwk_s_key);
-        printf("AppKey              : %s\n", flash_cfg.app_s_key);
-        printf("Senha               : %s\n", flash_cfg.password);
-        printf("Data e Hora         : %lu\n", flash_cfg.setup_date);
+        printf("DevEUI                  : %s\n", flash_cfg.dev_addr);
+        printf("Network Session Key     : %s\n", flash_cfg.nwk_s_key);
+        printf("Application Session Key : %s\n", flash_cfg.app_s_key);
+        printf("Data e Hora             : %lu\n", flash_cfg.setup_date);
         printf("-+H+-+H+-+H+-+H+-+H+-+H+-+H+-+H+-+H+-\n");
     } else {
         printf("\n[!] Nenhuma configuracao previa encontrada na memoria.\n");
@@ -151,10 +147,10 @@ void uart_cli_run_menu(void) {
                             int option = input_buffer[0] - '0';
 
                             // Opções dos submenus
-                            if (option >= 1 && option <= 6) {
+                            if (option >= 1 && option <= 4) {
                                 submenu_atual = option;
                                 estado_atual = STATE_SUBMENU_INPUT;
-                                if (option == 6) {
+                                if (option == 4) {
                                     printf("\n \n> Insira a data e hora (AAAA-MM-DD HH:mm): ");
                                 } else {
                                     printf("\n \n> Insira o novo valor (Enter para confirmar): ");
@@ -203,32 +199,22 @@ void uart_cli_run_menu(void) {
                     } else if (estado_atual == STATE_SUBMENU_INPUT) {
                         if (input_pos > 0) {
 
-                            // Submenu ---> Nome do dispositivo
-                            if (submenu_atual == 1) {
-                                strncpy(temp_config.device_name, input_buffer, sizeof(temp_config.device_name) - 1);
-                                printf("\n[+] Entrada recebida!\n");
-
                              // Submenu ---> DevEUI
-                            } else if (submenu_atual == 2) {
+                            if (submenu_atual == 1) {
                                 strncpy(temp_config.dev_addr, input_buffer, sizeof(temp_config.dev_addr) - 1);
                                 temp_config.dev_addr[sizeof(temp_config.dev_addr) - 1] = '\0';
                                 printf("\n[+] Entrada recebida!\n");
 
-                             // Submenu ---> JoinEUI
-                            } else if (submenu_atual == 3) {
+                             // Submenu ---> Network Session Key
+                            } else if (submenu_atual == 2) {
                                 strncpy(temp_config.nwk_s_key, input_buffer, sizeof(temp_config.nwk_s_key) - 1);
                                 temp_config.nwk_s_key[sizeof(temp_config.nwk_s_key) - 1] = '\0';
                                 printf("\n[+] Entrada recebida!\n");
 
-                             // Submenu ---> AppKey
-                            } else if (submenu_atual == 4) {
+                             // Submenu ---> Application Session Key
+                            } else if (submenu_atual == 3) {
                                 strncpy(temp_config.app_s_key, input_buffer, sizeof(temp_config.app_s_key) - 1);
                                 temp_config.app_s_key[sizeof(temp_config.app_s_key) - 1] = '\0';
-                                printf("\n[+] Entrada recebida!\n");
-
-                             // Submenu ---> Senha
-                            } else if (submenu_atual == 5) {
-                                strncpy(temp_config.password, input_buffer, sizeof(temp_config.password) - 1);
                                 printf("\n[+] Entrada recebida!\n");
                             
                              // Submenu ---> Data e Hora (conversão para Epoch)
@@ -274,6 +260,7 @@ void uart_cli_run_menu(void) {
                     // Retorno do carro para a posição inicial
                     input_pos = 0; 
                 }
+                
                 
                 // Registro do input
                 else if (input_pos < BUF_SIZE - 1) {
