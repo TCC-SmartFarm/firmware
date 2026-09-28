@@ -207,66 +207,84 @@ static esp_err_t api_post_handler(httpd_req_t *req) {
     char buf[256];
     int ret, remaining = req->content_len;
 
+    ESP_LOGI(TAG, "Requisicao API JSON iniciada. Tamanho do payload: %d bytes", remaining);
+
     if (remaining >= sizeof(buf)) {
+        ESP_LOGE(TAG, "Payload excede o limite do buffer (%d >= %d bytes)", remaining, sizeof(buf));
         httpd_resp_send_500(req);
         return ESP_FAIL;
     }
 
-    // Lê o payload JSON bruto
     ret = httpd_req_recv(req, buf, remaining);
     if (ret <= 0) {
         if (ret == HTTPD_SOCK_ERR_TIMEOUT) {
+            ESP_LOGE(TAG, "Timeout ao ler o corpo da requisicao HTTP");
             httpd_resp_send_408(req);
+        } else {
+            ESP_LOGE(TAG, "Falha critica no socket ao ler a requisicao: %d", ret);
         }
         return ESP_FAIL;
     }
     buf[ret] = '\0';
 
-    // Parsing do JSON
+    // Log em nível DEBUG para visualizar o que o aplicativo efetivamente enviou antes do parse
+    ESP_LOGD(TAG, "Payload raw recebido: %s", buf);
+
     cJSON *root = cJSON_Parse(buf);
     if (root == NULL) {
-        ESP_LOGE(TAG, "Falha ao processar JSON");
+        const char *error_ptr = cJSON_GetErrorPtr();
+        ESP_LOGE(TAG, "Erro de sintaxe no JSON. Verifique a formatacao perto de: %s", error_ptr ? error_ptr : "desconhecido");
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "JSON Invalido");
         return ESP_FAIL;
     }
 
-    // Carrega a configuração atual
     user_config_t config = {0};
     device_config_load(&config);
 
-    // Extrai os valores do JSON, verificando a existência de cada campo
     cJSON *dev_addr = cJSON_GetObjectItem(root, "dev_addr");
     if (cJSON_IsString(dev_addr) && (dev_addr->valuestring != NULL)) {
         strncpy(config.dev_addr, dev_addr->valuestring, sizeof(config.dev_addr));
+        ESP_LOGI(TAG, "dev_addr extraido: %s", config.dev_addr);
+    } else {
+        ESP_LOGW(TAG, "dev_addr ausente ou tipo incorreto no JSON");
     }
 
     cJSON *nwk_s_key = cJSON_GetObjectItem(root, "nwk_s_key");
     if (cJSON_IsString(nwk_s_key) && (nwk_s_key->valuestring != NULL)) {
         strncpy(config.nwk_s_key, nwk_s_key->valuestring, sizeof(config.nwk_s_key));
+        ESP_LOGI(TAG, "nwk_s_key extraido: %s", config.nwk_s_key);
+    } else {
+        ESP_LOGW(TAG, "nwk_s_key ausente ou tipo incorreto no JSON");
     }
 
     cJSON *app_s_key = cJSON_GetObjectItem(root, "app_s_key");
     if (cJSON_IsString(app_s_key) && (app_s_key->valuestring != NULL)) {
         strncpy(config.app_s_key, app_s_key->valuestring, sizeof(config.app_s_key));
+        ESP_LOGI(TAG, "app_s_key extraido: %s", config.app_s_key);
+    } else {
+        ESP_LOGW(TAG, "app_s_key ausente ou tipo incorreto no JSON");
     }
 
     cJSON *setup_date = cJSON_GetObjectItem(root, "setup_date");
     if (cJSON_IsNumber(setup_date)) {
         config.setup_date = (uint32_t)setup_date->valuedouble;
+        ESP_LOGI(TAG, "setup_date extraido: %u", config.setup_date);
+    } else {
+        ESP_LOGW(TAG, "setup_date ausente ou nao e um valor numerico");
     }
 
     config.is_configured = true;
-    cJSON_Delete(root); // Libera a memória alocada pelo parser JSON
+    cJSON_Delete(root);
 
-    // Salva e reinicia
     if (device_config_save(&config) == ESP_OK) {
-        ESP_LOGI(TAG, "Configuracoes salvas via Aplicativo.");
+        ESP_LOGI(TAG, "Escrita na NVS concluida. Retornando status 200 para a API e reiniciando...");
         httpd_resp_set_type(req, "application/json");
         httpd_resp_sendstr(req, "{\"status\":\"sucesso\"}");
         
         vTaskDelay(pdMS_TO_TICKS(1000));
         esp_restart();
     } else {
+        ESP_LOGE(TAG, "Falha de hardware/particao ao salvar configuracoes na NVS");
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Erro de memoria");
     }
 

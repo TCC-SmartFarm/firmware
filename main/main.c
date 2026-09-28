@@ -42,6 +42,8 @@ static const char *TAG = "main";
 
 // Botão de Menu
 #define PIN_NUM_SETUP_BUTTON        35 
+#define TEMPO_PRESSAO_MS 2000       
+#define SAMPLE_MS 10
 
 // Barramento I²C
 #define PIN_NUM_I2C_SCL             22
@@ -162,7 +164,7 @@ vTaskDelay(pdMS_TO_TICKS(1000)); // Aguarda estabilização da serial
 
     // Resolução do Wake Up
     esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
-    bool force_configuration = true;
+    bool force_configuration = false;
 
     if (cause == ESP_SLEEP_WAKEUP_EXT0 || !config.is_configured) {
         ESP_LOGI(TAG, "Condicao de configuracao detectada (Botao ou Falta de Credenciais).");
@@ -192,7 +194,7 @@ vTaskDelay(pdMS_TO_TICKS(1000)); // Aguarda estabilização da serial
             }
 
             // Armazenamento
-            //save_to_sd_card(&data);
+            save_to_sd_card(&data);
 
             // Transmissão
             execute_transmission_cycle(&data, &config);
@@ -544,7 +546,8 @@ static void prepare_deep_sleep_and_shutdown(void) {
     ESP_LOGI(TAG, "Despertador configurado para %i minutos.", SLEEP_DURATION_MIN);
 
     // Definindo a fonte externa de Wake-Up (Botão ---> Menu de configuração)
-    esp_sleep_enable_ext0_wakeup(PIN_NUM_SETUP_BUTTON, 1); 
+    esp_sleep_enable_ext0_wakeup(PIN_NUM_SETUP_BUTTON, 1);
+    //gpio_set_pull_mode(PIN_NUM_SETUP_BUTTON, GPIO_PULLUP_ONLY); 
 
 
     ESP_LOGI(TAG, "Dormindo...");

@@ -662,8 +662,19 @@ e reutilizá-los em transmissões futuras.
     - Calibragem dos sensores!
     - Verificação do timestamp em caso de perda de energia. Verificar Tempo atual x Tempo no NVS
     - Limpeza dos códigos de teste e código morto
-    - Adicionar entradas para os demais parametros de configuração no portal wifi
 
 * Correção do menu CLI para retirar variaveis n utilizadas (nome do device e senha)
 
 * Correção do menu online e API par aincluir o campo de data
+
+* Incluir função de debounce na main para evitar o wake indevido por instabilidades no botão?
+    - Resolvido, botão estava mal monstado fisicamente
+
+=============================================================== 10/09/2026 ===============================================================
+
+----> To-Do's
+    - Calibragem dos sensores!
+    - Verificação do timestamp em caso de perda de energia. Verificar Tempo atual x Tempo no NVS
+    - Limpeza dos códigos de teste e código morto
+
+* Adição de linhas de debug no handler da API local
