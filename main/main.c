@@ -139,6 +139,12 @@ static void prepare_deep_sleep_and_shutdown(void);
 
 /* ------------------------------ Protótipos - Funções Auxiliares --------------------------------------*/
 
+/**
+ * @brief Executa a leitura RAW dos sensores I2C, agrupa com os 
+ * dados calculados e salva no arquivo /sdcard/calibracao.csv.
+ * @param data Ponteiro para a struct contendo os dados calculados no ciclo atual.
+ */
+static void execute_calibration_logging(const sensor_data_t *data);
 
 /* ------------------------------ Loop Principal - app_main()  --------------------------------------*/
 
@@ -194,7 +200,11 @@ vTaskDelay(pdMS_TO_TICKS(1000)); // Aguarda estabilização da serial
             }
 
             // Armazenamento
-            save_to_sd_card(&data);
+            //save_to_sd_card(&data);
+
+            // Calibração (substitui o bloco de armazenamento pois usa outro arquivo para registrar os dados)
+            ESP_LOGI(TAG, "\n========== EXECUTANDO LOG DE CALIBRACAO ==========\n");
+            execute_calibration_logging(&data);
 
             // Transmissão
             execute_transmission_cycle(&data, &config);
@@ -560,3 +570,64 @@ static void prepare_deep_sleep_and_shutdown(void) {
 }
 
 /* --------------------------------- Funções Auxiliares ----------------------------------------*/
+
+static void execute_calibration_logging(const sensor_data_t *data) {
+    if (!data->is_valid) return;
+
+    char csv_buffer[256];
+    int soil_raw = 0;
+    int light_raw = 0;
+
+    ESP_LOGI(TAG, "Lendo valores RAW dos sensores ADC (ADS1115)...");
+
+    // Coleta dos valores RAW
+    soil_sensor_read_raw(&soil_raw);
+    light_sensor_read_raw(&light_raw);
+
+    // Timestamp
+    long long ts = (long long)data->timestamp;
+
+    // Montagem do payload CSV de dados
+    snprintf(csv_buffer, sizeof(csv_buffer), "%lld,%.2f,%.2f,%d,%.2f,%d", 
+             ts, 
+             data->air_temp,
+             data->soil_hum, soil_raw, 
+             data->light_perc, light_raw);
+
+    ESP_LOGI(TAG, "Calibracao CSV Line: %s", csv_buffer);
+
+    // Inicialização do Barramento SPI para o cartão SD
+    ESP_LOGI(TAG, "Inicializando Barramento SPI (SD) para calibração...");
+    if (bus_spi_init(SPI_HOST_ID, PIN_NUM_SPI_MOSI, PIN_NUM_SPI_MISO_SD, PIN_NUM_SPI_CLK, SPI_MAX_TRANSFER) == ESP_OK) {
+        
+        // Acoplamento e Montagem
+        if (sdcard_config(SPI_HOST_ID, PIN_NUM_SPI_CS_SD, MOUNT_POINT) == ESP_OK) {
+            
+            const char* file_path = "/sdcard/calib.csv";
+            struct stat st;
+            
+            // Verifica se o arquivo NÃO existe no SD Card
+            if (stat(file_path, &st) != 0) {
+                ESP_LOGI(TAG, "Arquivo %s nao encontrado. Criando e inserindo cabecalho...", file_path);
+                
+                // Grava a primeira linha com o nome das colunas
+                // A sua função sdcard_write já insere o '\n' automaticamente no final
+                const char* header = "Timestamp,Air_Temp,Soil_Hum_Perc,Soil_Hum_Raw,Light_Perc,Light_Raw";
+                sdcard_write(file_path, header);
+            }
+
+            // Grava os dados da amostragem atual
+            if (sdcard_write(file_path, csv_buffer) != ESP_OK) {
+                ESP_LOGE(TAG, "Erro ao gravar dados no arquivo de calibração.");
+            }
+            
+            // Desmontagem
+            sdcard_deinit(MOUNT_POINT);
+        }
+        
+        // Liberação do Barramento SPI
+        bus_spi_free(SPI_HOST_ID);
+    } else {
+        ESP_LOGE(TAG, "Falha na inicialização do SPI para calibração.");
+    }
+}
