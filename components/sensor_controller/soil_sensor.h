@@ -23,14 +23,14 @@ Arquivo contendo os headers das funções implementadas no arquivo soil_sensor.c
  * @param ads_channel Canal analógico interno do ADS1115  conectado ao sensor.
  * @return esp_err_t ESP_OK em caso de sucesso.
  */
-esp_err_t soil_sensor_init_ads1115(i2c_port_t i2c_num, uint8_t i2c_address, int ads_channel);
+esp_err_t soil_sensor_init(i2c_port_t i2c_num, uint8_t i2c_address, int ads_channel);
 
 /**
  * @brief Lê a umidade do solo utilizando o ADS1115 via I2C.
  * @param moisture_percent Ponteiro para armazenar a umidade calculada (0% a 100%).
  * @return esp_err_t ESP_OK em caso de sucesso.
  */
-esp_err_t soil_sensor_read_ads1115(float* moisture_percent);
+esp_err_t soil_sensor_read(float* moisture_percent);
 
 /**
  * @brief Realiza a leitura bruta do ADC I2C para calibração.

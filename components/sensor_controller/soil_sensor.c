@@ -28,7 +28,7 @@ static int ads_channel = -1;
 
 // ------------------------------------------------------ Funções ------------------------------------------------------
 
-esp_err_t soil_sensor_init_ads1115(i2c_port_t i2c_num, uint8_t i2c_address, int ads_chan) {
+esp_err_t soil_sensor_init(i2c_port_t i2c_num, uint8_t i2c_address, int ads_chan) {
 
     if (ads_chan < 0 || ads_chan > 3) {
         ESP_LOGE(TAG, "Canal ADS1115 inválido. Deve ser entre 0 e 3.");
@@ -56,7 +56,7 @@ static void calculate_moisture_percentage(int raw_value, float* percent_out) {
     *percent_out = percent;
 }
 
-esp_err_t soil_sensor_read_ads1115(float* moisture_percent) {
+esp_err_t soil_sensor_read(float* moisture_percent) {
 
     // Verificação de erro de leitura
     if (moisture_percent == NULL) return ESP_ERR_INVALID_ARG;
@@ -68,12 +68,12 @@ esp_err_t soil_sensor_read_ads1115(float* moisture_percent) {
     }
 
     // Palavra de configuração - Config Register do ADS1115
-    uint16_t config = 0x4000 | (ads_channel << 12) | // MUX = Single-Ended + Canal
-                                            0x0200 | // PGA = Ganho +/- 4.096V
-                                            0x0100 | // MODE = Single-Shot
-                                            0x0083;  // Data rate = 128 SPS + ALRT off
-
-    config |= 0x8000; // OS = 1
+    uint16_t config = 0x8000              |   // OS: 1 = Inicia conversão 
+                      0x4000              |   // MUX: Base para Single-Ended
+                      (ads_channel << 12) |   // MUX: Deslocamento do canal (0 a 3)
+                      0x0200              |   // PGA: Ganho +/- 4.096V
+                      0x0100              |   // MODE: Single-Shot
+                      0x0083;                 // DR: 128 SPS + ALRT off
     
     // Valor a ser escrito no Config Register (em 0x01) em dois conjuntos de 8 bits e máscaras
     uint8_t write_buf[3] = {0x01, (uint8_t)(config >> 8), (uint8_t)(config & 0xFF)};
@@ -106,10 +106,12 @@ esp_err_t soil_sensor_read_raw(int* raw_value) {
     if (ads_i2c_num == -1) return ESP_ERR_INVALID_STATE;
 
     // Palavra de configuração - Config Register do ADS1115
-    uint16_t config = 0x4000 | (ads_channel << 12) | // MUX = Single-Ended + Canal
-                                            0x0200 | // PGA = Ganho +/- 4.096V
-                                            0x0100 | // MODE = Single-Shot
-                                            0x0083;  // Data rate = 128 SPS + ALRT off
+    uint16_t config = 0x8000              |   // OS: 1 = Inicia conversão 
+                      0x4000              |   // MUX: Base para Single-Ended
+                      (ads_channel << 12) |   // MUX: Deslocamento do canal (0 a 3)
+                      0x0200              |   // PGA: Ganho +/- 4.096V
+                      0x0100              |   // MODE: Single-Shot
+                      0x0083;                 // DR: 128 SPS + ALRT off 
     
     uint8_t write_buf[3] = {0x01, (uint8_t)(config >> 8), (uint8_t)(config & 0xFF)};
     esp_err_t ret = i2c_master_write_to_device(ads_i2c_num, ads_i2c_address, write_buf, sizeof(write_buf), pdMS_TO_TICKS(100));

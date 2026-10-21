@@ -86,8 +86,8 @@ RTC_DATA_ATTR static uint32_t rtc_uplink_counter = 0;                           
 
 // Conversor AD externo - ADS1115 (I²C)
 #define ADS1115_I2C_ADDRESS         0x48    // Endereço padrão (ADDR ligado em GND)
-#define ADS1115_CHANNEL_HIG         0       // Canal A0 -> Higrômetro
-#define ADS1115_CHANNEL_LDR         1       // Canal A1 -> LDR
+#define ADS1115_CHANNEL_HIG         1       // Canal A1 -> Higrômetro
+#define ADS1115_CHANNEL_LDR         0       // Canal A0 -> LDR
 #define ADS1115_CHANNEL_BAT         2       // Canal A2 -> Bateria
                                             // Amostragem:
 #define NUM_READINGS                5       //  Número de amostras de sensores analógicos
@@ -280,7 +280,7 @@ static sensor_data_t execute_reading_cycle(void) {
 
     // Inicialização dos sensores
     esp_err_t ret_air = air_sensor_init(PIN_NUM_SDA_DHT);
-    esp_err_t ret_soil = soil_sensor_init_ads1115(I2C_MASTER_NUM, ADS1115_I2C_ADDRESS, ADS1115_CHANNEL_HIG);
+    esp_err_t ret_soil = soil_sensor_init(I2C_MASTER_NUM, ADS1115_I2C_ADDRESS, ADS1115_CHANNEL_HIG);
     esp_err_t ret_ldr = light_sensor_init(I2C_MASTER_NUM, ADS1115_I2C_ADDRESS, ADS1115_CHANNEL_LDR);
     esp_err_t ret_bat = battery_level_init(I2C_MASTER_NUM, ADS1115_I2C_ADDRESS, ADS1115_CHANNEL_BAT);
 
@@ -318,7 +318,7 @@ static sensor_data_t execute_reading_cycle(void) {
         float sample_light = 0;
         float sample_bat = 0;
 
-        if (soil_sensor_read_ads1115(&sample_soil) == ESP_OK) {
+        if (soil_sensor_read(&sample_soil) == ESP_OK) {
             acc_soil_hum += sample_soil;
             valid_soil_samples++;
         }
@@ -611,7 +611,6 @@ static void execute_calibration_logging(const sensor_data_t *data) {
                 ESP_LOGI(TAG, "Arquivo %s nao encontrado. Criando e inserindo cabecalho...", file_path);
                 
                 // Grava a primeira linha com o nome das colunas
-                // A sua função sdcard_write já insere o '\n' automaticamente no final
                 const char* header = "Timestamp,Air_Temp,Soil_Hum_Perc,Soil_Hum_Raw,Light_Perc,Light_Raw";
                 sdcard_write(file_path, header);
             }
