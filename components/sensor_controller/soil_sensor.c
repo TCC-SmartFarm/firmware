@@ -83,7 +83,7 @@ esp_err_t soil_sensor_read(float* moisture_percent) {
     if (ret != ESP_OK) return ret;
 
     // Delay para conversão via ADS1115
-    vTaskDelay(pdMS_TO_TICKS(10)); 
+    vTaskDelay(pdMS_TO_TICKS(50)); 
 
     // Leitura do registrador
     uint8_t reg_ptr = 0x00; 
@@ -117,7 +117,7 @@ esp_err_t soil_sensor_read_raw(int* raw_value) {
     esp_err_t ret = i2c_master_write_to_device(ads_i2c_num, ads_i2c_address, write_buf, sizeof(write_buf), pdMS_TO_TICKS(100));
     if (ret != ESP_OK) return ret;
 
-    vTaskDelay(pdMS_TO_TICKS(10)); 
+    vTaskDelay(pdMS_TO_TICKS(50)); 
 
     uint8_t reg_ptr = 0x00; 
     uint8_t read_buf[2] = {0};

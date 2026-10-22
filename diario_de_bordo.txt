@@ -678,3 +678,12 @@ e reutilizá-los em transmissões futuras.
     - Limpeza dos códigos de teste e código morto
 
 * Adição de linhas de debug no handler da API local
+
+=============================================================== 10/09/2026 ===============================================================
+
+----> To-Do's
+    - Verificação do timestamp em caso de perda de energia. Verificar Tempo atual x Tempo no NVS
+    - Limpeza dos códigos de teste e código morto
+
+* Considerações após os teste de calibração:
+    - Arrumar, para o protótipo final, a ligação dos sensores analógicos (incluir um divisor resistivo para viabilizar as leituras)
