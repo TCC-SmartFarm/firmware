@@ -6,18 +6,21 @@ Arquivo destinado a implementar as funções de leitura do sensor de umidade do 
 
 
 // Includes
+#include <math.h>
+
 #include "soil_sensor.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+
 // ------------------------------------------------------ Definição de constantes ------------------------------------------------------
 
 static const char *TAG = "soil_sensor";
 
-// Variáveis de Calibração - Definidas arbitrariamente antes dos testes reais
-#define VALOR_SECO 3000    
-#define VALOR_MOLHADO 1000 
+// Variáveis de Calibração - Coeficientes de uma curva logaritmica
+#define INCLINACAO -97.974f    
+#define INTERCEPTO 874.607f 
 
 
 // Inicialização dos parâmetros do ADS1115 (serão modificados pela função de inicialização do sensor)
@@ -45,9 +48,12 @@ esp_err_t soil_sensor_init(i2c_port_t i2c_num, uint8_t i2c_address, int ads_chan
 
 // Função de calibração (Tensão lida --> Percentual)
 static void calculate_moisture_percentage(int raw_value, float* percent_out) {
+    if (raw_value <= 0) {
+        raw_value = 1; 
+    }
 
-    // Conversão com base nos valores máximos
-    float percent = (float)(VALOR_SECO - raw_value) / (VALOR_SECO - VALOR_MOLHADO) * 100.0f;
+    // Umidade(%) = a * ln(Raw) + b
+    float percent = -INCLINACAO * log((float)raw_value) + INTERCEPTO;
 
     // Definição dos extremos
     if (percent < 0.0f) percent = 0.0f;

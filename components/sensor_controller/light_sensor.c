@@ -14,9 +14,9 @@ Arquivo destinado a implementar as funções de leitura do sensor de luminosidad
 
 static const char *TAG = "light_sensor";
 
-// Variáveis de Calibração - Definidas arbitrariamente antes dos testes reais
-#define VALOR_ESCURO 25000 
-#define VALOR_CLARO 1000   
+// Variáveis de Calibração
+#define VALOR_ESCURO 26000 
+#define VALOR_CLARO 3000   
 
 // Inicialização dos parâmetros do ADS1115 (serão modificados pela função de inicialização do sensor)
 static i2c_port_t ads_i2c_num = -1;

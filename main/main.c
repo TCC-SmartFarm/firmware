@@ -42,8 +42,6 @@ static const char *TAG = "main";
 
 // Botão de Menu
 #define PIN_NUM_SETUP_BUTTON        35 
-#define TEMPO_PRESSAO_MS 2000       
-#define SAMPLE_MS 10
 
 // Barramento I²C
 #define PIN_NUM_I2C_SCL             22
@@ -60,9 +58,9 @@ static const char *TAG = "main";
 
 // Cartão SD (SPI)
 #define PIN_NUM_SPI_CS_SD        5
-#define MOUNT_POINT              "/sdcard"  // Ponto de montagem
-#define MAX_FILE_SIZE_BYTES      1024       // ----------------- TESTE: 1 KB para forçar a rotação rápida
-#define MAX_LOG_FILES            5          // ----------------- TESTE: 5 arquivos no máximo
+#define MOUNT_POINT              "/sdcard"   // Ponto de montagem
+#define MAX_FILE_SIZE_BYTES      51200       // ---------------- 50 Kb
+#define MAX_LOG_FILES            25          // ---------------- 25 arquivos no máximo
 
 // Barramento SPI - Módulo LoRa
 #define SPI_HOST_ID              SPI2_HOST
@@ -79,19 +77,14 @@ static const char *TAG = "main";
 #define LORAWAN_SESSION_BUF_SIZE    256     // Tamanho do buffer (denifino em lorawan_config.h)
 #define NVS_BACKUP_INTERVAL         50      // Backup na Flash a cada 50 transmissões
 
-// Memória RTC
-RTC_DATA_ATTR static bool rtc_lora_session_valid = false;                       // Verificador da existencia de uma sessão (p/ cold boot i.e)
-RTC_DATA_ATTR static uint8_t rtc_lora_session_buffer[LORAWAN_SESSION_BUF_SIZE]; // Buffer para estado de sessão lora
-RTC_DATA_ATTR static uint32_t rtc_uplink_counter = 0;                           // Contador para backup
-
 // Conversor AD externo - ADS1115 (I²C)
 #define ADS1115_I2C_ADDRESS         0x48    // Endereço padrão (ADDR ligado em GND)
-#define ADS1115_CHANNEL_HIG         1       // Canal A1 -> Higrômetro
 #define ADS1115_CHANNEL_LDR         0       // Canal A0 -> LDR
+#define ADS1115_CHANNEL_HIG         1       // Canal A1 -> Higrômetro
 #define ADS1115_CHANNEL_BAT         2       // Canal A2 -> Bateria
                                             // Amostragem:
 #define NUM_READINGS                5       //  Número de amostras de sensores analógicos
-#define ADC_SAMPLE_DELAY_MS         20      //  Delay entre as amostras
+#define ADC_SAMPLE_DELAY_MS         30      //  Delay entre as amostras
 
 // DHT
 #define PIN_NUM_SDA_DHT             32
@@ -191,7 +184,7 @@ vTaskDelay(pdMS_TO_TICKS(1000)); // Aguarda estabilização da serial
             if (!data.is_valid) {
                 ESP_LOGW(TAG, "Sensores falharam. Injetando dados DUMMY para testar transmissao LoRa.");
                 data.air_temp = 25.5;
-                data.air_hum = 60.0;
+                data.air_hum = 80.0;
                 data.soil_hum = 45.0;
                 data.light_perc = 80.0;
                 data.battery = 100.0;
@@ -200,11 +193,11 @@ vTaskDelay(pdMS_TO_TICKS(1000)); // Aguarda estabilização da serial
             }
 
             // Armazenamento
-            //save_to_sd_card(&data);
+            save_to_sd_card(&data);
 
             // Calibração (substitui o bloco de armazenamento pois usa outro arquivo para registrar os dados)
-            ESP_LOGI(TAG, "\n========== EXECUTANDO LOG DE CALIBRACAO ==========\n");
-            execute_calibration_logging(&data);
+            //ESP_LOGI(TAG, "\n========== EXECUTANDO LOG DE CALIBRACAO ==========\n");
+            //execute_calibration_logging(&data);
 
             // Transmissão
             execute_transmission_cycle(&data, &config);
