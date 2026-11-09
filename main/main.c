@@ -193,11 +193,11 @@ vTaskDelay(pdMS_TO_TICKS(1000)); // Aguarda estabilização da serial
             }
 
             // Armazenamento
-            save_to_sd_card(&data);
+            //save_to_sd_card(&data);
 
             // Calibração (substitui o bloco de armazenamento pois usa outro arquivo para registrar os dados)
-            //ESP_LOGI(TAG, "\n========== EXECUTANDO LOG DE CALIBRACAO ==========\n");
-            //execute_calibration_logging(&data);
+            ESP_LOGI(TAG, "\n========== EXECUTANDO LOG DE CALIBRACAO ==========\n");
+            execute_calibration_logging(&data);
 
             // Transmissão
             execute_transmission_cycle(&data, &config);
@@ -570,22 +570,25 @@ static void execute_calibration_logging(const sensor_data_t *data) {
     char csv_buffer[256];
     int soil_raw = 0;
     int light_raw = 0;
+    int bat_raw = 0;
 
     ESP_LOGI(TAG, "Lendo valores RAW dos sensores ADC (ADS1115)...");
 
     // Coleta dos valores RAW
     soil_sensor_read_raw(&soil_raw);
     light_sensor_read_raw(&light_raw);
+    battery_level_read_raw(&bat_raw);
 
     // Timestamp
     long long ts = (long long)data->timestamp;
 
     // Montagem do payload CSV de dados
-    snprintf(csv_buffer, sizeof(csv_buffer), "%lld,%.2f,%.2f,%d,%.2f,%d", 
+    snprintf(csv_buffer, sizeof(csv_buffer), "%lld,%.2f,%.2f,%d,%.2f,%d,%.2f,%d", 
              ts, 
              data->air_temp,
              data->soil_hum, soil_raw, 
-             data->light_perc, light_raw);
+             data->light_perc, light_raw,
+             data->battery, bat_raw);
 
     ESP_LOGI(TAG, "Calibracao CSV Line: %s", csv_buffer);
 
@@ -604,7 +607,7 @@ static void execute_calibration_logging(const sensor_data_t *data) {
                 ESP_LOGI(TAG, "Arquivo %s nao encontrado. Criando e inserindo cabecalho...", file_path);
                 
                 // Grava a primeira linha com o nome das colunas
-                const char* header = "Timestamp,Air_Temp,Soil_Hum_Perc,Soil_Hum_Raw,Light_Perc,Light_Raw";
+                const char* header = "Timestamp,Air_Temp,Soil_Hum_Perc,Soil_Hum_Raw,Light_Perc,Light_Raw,Battery,Battery_Raw";
                 sdcard_write(file_path, header);
             }
 

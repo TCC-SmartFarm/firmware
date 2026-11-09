@@ -29,4 +29,11 @@ esp_err_t battery_level_init(i2c_port_t i2c_num, uint8_t i2c_address, int ads_ch
  */
 esp_err_t battery_level_read(float* battery_level);
 
+/**
+ * @brief Realiza a leitura bruta do ADC I2C para calibração.
+ * @param raw_value Ponteiro para armazenar o valor lido do ADS1115 (0 a 32767).
+ * @return ESP_OK em caso de sucesso.
+ */
+esp_err_t battery_level_read_raw(int* raw_value);
+
 #endif

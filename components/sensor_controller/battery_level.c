@@ -15,8 +15,8 @@ Arquivo destinado a implementar as funções de leitura da tensão da bateria ut
 static const char *TAG = "battery_level";
 
 // Variáveis de Calibração - Definidas arbitrariamente antes dos testes reais
-#define TENSAO_CARREGADA 3.9 
-#define TENSAO_DESCARREGADA 3.5   
+#define VALOR_CARREGADO 14800 
+#define VALOR_DESCARREGADO 11400   
 
 // Inicialização dos parâmetros do ADS1115 (serão modificados pela função de inicialização do sensor)
 static i2c_port_t ads_i2c_num = -1;
@@ -44,7 +44,7 @@ esp_err_t battery_level_init(i2c_port_t i2c_num, uint8_t i2c_address, int ads_ch
 static void calculate_battery_percentage(int raw_value, float* percent_out) {
 
     // Conversão com base nos valores máximos
-    float percent = (float)(TENSAO_CARREGADA - raw_value) / (TENSAO_CARREGADA - TENSAO_DESCARREGADA) * 100.0f;
+    float percent = (float)(VALOR_CARREGADO - raw_value) / (VALOR_CARREGADO - VALOR_DESCARREGADO) * 100.0f;
     
     // Definição dos extremos
     if (percent < 0.0f) percent = 0.0f;
@@ -65,12 +65,12 @@ esp_err_t battery_level_read(float* battery_level) {
     }
 
     // Palavra de configuração - Config Register do ADS1115
-    uint16_t config = 0x4000 | (ads_channel << 12) | // MUX = Single-Ended + Canal
-                                            0x0200 | // PGA = Ganho +/- 4.096V
-                                            0x0100 | // MODE = Single-Shot
-                                            0x0083;  // Data rate = 128 SPS + ALRT off 
-
-    config |= 0x8000; // OS = 1
+    uint16_t config = 0x8000              |   // OS: 1 = Inicia conversão 
+                      0x4000              |   // MUX: Base para Single-Ended
+                      (ads_channel << 12) |   // MUX: Deslocamento do canal (0 a 3)
+                      0x0200              |   // PGA: Ganho +/- 4.096V
+                      0x0100              |   // MODE: Single-Shot
+                      0x0083;                 // DR: 128 SPS + ALRT off
     
     // Valor a ser escrito no Config Register (em 0x01) em dois conjuntos de 8 bits e máscaras
     uint8_t write_buf[3] = {0x01, (uint8_t)(config >> 8), (uint8_t)(config & 0xFF)};
@@ -80,7 +80,7 @@ esp_err_t battery_level_read(float* battery_level) {
     if (ret != ESP_OK) return ret;
 
     // Delay para conversão via ADS1115
-    vTaskDelay(pdMS_TO_TICKS(10)); 
+    vTaskDelay(pdMS_TO_TICKS(50)); 
 
     // Ponteiro apontando para o Conversion Register em 0x00
     uint8_t reg_ptr = 0x00; 
@@ -97,5 +97,37 @@ esp_err_t battery_level_read(float* battery_level) {
     // Conversão 
     calculate_battery_percentage(raw_value, battery_level);
 
+    return ESP_OK;
+}
+
+// Função exclusiva para a rotina de calibração
+esp_err_t battery_level_read_raw(int* raw_value) {
+    if (raw_value == NULL) return ESP_ERR_INVALID_ARG;
+    if (ads_i2c_num == -1) return ESP_ERR_INVALID_STATE;
+
+    // Palavra de configuração - Config Register do ADS1115
+    uint16_t config = 0x8000              |   // OS: 1 = Inicia conversão 
+                      0x4000              |   // MUX: Base para Single-Ended
+                      (ads_channel << 12) |   // MUX: Deslocamento do canal (0 a 3)
+                      0x0200              |   // PGA: Ganho +/- 4.096V
+                      0x0100              |   // MODE: Single-Shot
+                      0x0083;                 // DR: 128 SPS + ALRT off 
+    
+    uint8_t write_buf[3] = {0x01, (uint8_t)(config >> 8), (uint8_t)(config & 0xFF)};
+    esp_err_t ret = i2c_master_write_to_device(ads_i2c_num, ads_i2c_address, write_buf, sizeof(write_buf), pdMS_TO_TICKS(100));
+    if (ret != ESP_OK) return ret;
+
+    vTaskDelay(pdMS_TO_TICKS(50)); 
+
+    uint8_t reg_ptr = 0x00; 
+    uint8_t read_buf[2] = {0};
+    ret = i2c_master_write_read_device(ads_i2c_num, ads_i2c_address, &reg_ptr, 1, read_buf, 2, pdMS_TO_TICKS(100));
+    if (ret != ESP_OK) return ret;
+
+    int val = (read_buf[0] << 8) | read_buf[1];
+    if (val > 32767) val -= 65536; 
+    
+    // Retorna o valor bruto 
+    *raw_value = val;
     return ESP_OK;
 }
